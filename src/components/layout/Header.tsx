@@ -2,7 +2,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Bell, Menu, Moon, Sun } from 'lucide-react';
+import { Bell, Menu, Moon, Sun, LayoutDashboard } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useTheme } from '@/hooks/use-theme';
 import {
@@ -48,6 +48,13 @@ export const Header = () => {
         )}
 
         <div className="flex items-center space-x-2">
+          {/* Dashboard Link */}
+          <Link to="/dashboard">
+            <Button variant="ghost" size="icon" aria-label="Dashboard">
+              <LayoutDashboard className="h-5 w-5" />
+            </Button>
+          </Link>
+
           {/* Notifications */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -132,6 +139,13 @@ export const Header = () => {
               onClick={() => setMenuOpen(false)}
             >
               About Us
+            </Link>
+            <Link 
+              to="/dashboard" 
+              className="px-4 py-3 hover:bg-accent rounded-md transition-colors"
+              onClick={() => setMenuOpen(false)}
+            >
+              Dashboard
             </Link>
             <Link 
               to="/login" 

@@ -12,6 +12,7 @@ import Signup from "./pages/Signup";
 import BookCab from "./pages/BookCab";
 import ServiceAreas from "./pages/ServiceAreas";
 import About from "./pages/About";
+import Dashboard from "./pages/Dashboard";
 
 // Admin Routes
 import AdminDashboard from "./pages/admin/Dashboard";
@@ -36,6 +37,7 @@ const App = () => (
             <Route path="/book-cab" element={<BookCab />} />
             <Route path="/service-areas" element={<ServiceAreas />} />
             <Route path="/about" element={<About />} />
+            <Route path="/dashboard" element={<Dashboard />} />
             
             {/* Admin Routes */}
             <Route path="/admin/dashboard" element={<AdminDashboard />} />
