@@ -1,12 +1,9 @@
-
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
 import { Car, Clock, MapPin } from 'lucide-react';
-
 export const HeroSection = () => {
-  return (
-    <div className="relative overflow-hidden hero-gradient">
+  return <div className="relative overflow-hidden hero-gradient">
       {/* Background Elements */}
       <div className="absolute inset-0 overflow-hidden">
         <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-maverick-400/10 rounded-full filter blur-3xl" />
@@ -66,15 +63,10 @@ export const HeroSection = () => {
           <div className="relative w-full max-w-lg">
             <div className="absolute -top-4 -left-4 w-72 h-72 bg-maverick-400/30 rounded-full filter blur-3xl animate-pulse-subtle" />
             <div className="relative z-10 bg-gradient-to-br from-maverick-50 to-maverick-100 p-1 rounded-xl border border-maverick-200 shadow-xl overflow-hidden">
-              <img
-                src="https://images.unsplash.com/photo-1559839734-2b71ea197ec2?q=80&w=1170&auto=format&fit=crop"
-                alt="Corporate cab service"
-                className="w-full h-auto rounded-lg object-cover"
-              />
+              <img alt="Corporate cab service" src="https://static.toiimg.com/thumb/msid-121147321,imgsize-48916,width-400,resizemode-4/Dallas-Mavericks.jpg" className="w-full h-auto rounded-lg object-cover" />
             </div>
           </div>
         </div>
       </div>
-    </div>
-  );
+    </div>;
 };
