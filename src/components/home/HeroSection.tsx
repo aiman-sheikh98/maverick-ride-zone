@@ -63,7 +63,7 @@ export const HeroSection = () => {
           <div className="relative w-full max-w-lg">
             <div className="absolute -top-4 -left-4 w-72 h-72 bg-maverick-400/30 rounded-full filter blur-3xl animate-pulse-subtle" />
             <div className="relative z-10 bg-gradient-to-br from-maverick-50 to-maverick-100 p-1 rounded-xl border border-maverick-200 shadow-xl overflow-hidden">
-              <img alt="Corporate cab service" src="https://static.toiimg.com/thumb/msid-121147321,imgsize-48916,width-400,resizemode-4/Dallas-Mavericks.jpg" className="w-full h-auto rounded-lg object-cover" />
+              <img alt="Corporate cab service" className="w-full h-auto rounded-lg object-cover" src="https://img.freepik.com/premium-vector/taxi-mobile-application-ordering-taxi-online-concept-illustration_148087-377.jpg?semt=ais_hybrid&w=740" />
             </div>
           </div>
         </div>
