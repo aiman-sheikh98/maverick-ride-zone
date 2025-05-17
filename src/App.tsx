@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "@/hooks/use-theme";
+import { AuthProvider } from "@/hooks/use-auth";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import Login from "./pages/Login";
@@ -13,6 +14,7 @@ import BookCab from "./pages/BookCab";
 import ServiceAreas from "./pages/ServiceAreas";
 import About from "./pages/About";
 import Dashboard from "./pages/Dashboard";
+import Profile from "./pages/Profile";
 
 // Admin Routes
 import AdminDashboard from "./pages/admin/Dashboard";
@@ -22,6 +24,29 @@ import AdminBookings from "./pages/admin/Bookings";
 
 const queryClient = new QueryClient();
 
+const AppRoutes = () => (
+  <Routes>
+    {/* Public Routes */}
+    <Route path="/" element={<Index />} />
+    <Route path="/login" element={<Login />} />
+    <Route path="/signup" element={<Signup />} />
+    <Route path="/book-cab" element={<BookCab />} />
+    <Route path="/service-areas" element={<ServiceAreas />} />
+    <Route path="/about" element={<About />} />
+    <Route path="/dashboard" element={<Dashboard />} />
+    <Route path="/profile" element={<Profile />} />
+    
+    {/* Admin Routes */}
+    <Route path="/admin/dashboard" element={<AdminDashboard />} />
+    <Route path="/admin/areas" element={<AdminAreas />} />
+    <Route path="/admin/contacts" element={<AdminContacts />} />
+    <Route path="/admin/bookings" element={<AdminBookings />} />
+    
+    {/* Catch-all Route */}
+    <Route path="*" element={<NotFound />} />
+  </Routes>
+);
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <ThemeProvider defaultTheme="light">
@@ -29,25 +54,9 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
-          <Routes>
-            {/* Public Routes */}
-            <Route path="/" element={<Index />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/signup" element={<Signup />} />
-            <Route path="/book-cab" element={<BookCab />} />
-            <Route path="/service-areas" element={<ServiceAreas />} />
-            <Route path="/about" element={<About />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            
-            {/* Admin Routes */}
-            <Route path="/admin/dashboard" element={<AdminDashboard />} />
-            <Route path="/admin/areas" element={<AdminAreas />} />
-            <Route path="/admin/contacts" element={<AdminContacts />} />
-            <Route path="/admin/bookings" element={<AdminBookings />} />
-            
-            {/* Catch-all Route */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+          <AuthProvider>
+            <AppRoutes />
+          </AuthProvider>
         </BrowserRouter>
       </TooltipProvider>
     </ThemeProvider>

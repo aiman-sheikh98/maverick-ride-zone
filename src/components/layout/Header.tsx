@@ -1,8 +1,16 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Bell, Menu, Moon, Sun, LayoutDashboard } from 'lucide-react';
+import { 
+  Bell, 
+  Menu, 
+  Moon, 
+  Sun, 
+  LayoutDashboard, 
+  User,
+  LogOut 
+} from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useTheme } from '@/hooks/use-theme';
 import {
@@ -10,20 +18,41 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu";
-import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { NotificationDropdown } from '@/components/notifications/NotificationDropdown';
+import { useAuth } from '@/hooks/use-auth';
+import { supabase } from '@/integrations/supabase/client';
 
 export const Header = () => {
   const isMobile = useIsMobile();
-  const [menuOpen, setMenuOpen] = React.useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const { theme, setTheme } = useTheme();
-
-  // Dummy notifications for demo
-  const notifications = [
-    { id: 1, text: "Your cab will arrive in 5 minutes", read: false },
-    { id: 2, text: "Booking #1234 has been confirmed", read: false },
-    { id: 3, text: "Your receipt is ready for booking #1234", read: true },
-  ];
+  const { user, signOut } = useAuth();
+  const [profile, setProfile] = useState<any>(null);
+  
+  useEffect(() => {
+    const fetchProfile = async () => {
+      if (!user) return;
+      
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .single();
+        
+        if (!error && data) {
+          setProfile(data);
+        }
+      } catch (error) {
+        console.error('Error fetching profile:', error);
+      }
+    };
+    
+    fetchProfile();
+  }, [user]);
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-border">
@@ -56,38 +85,7 @@ export const Header = () => {
           </Link>
 
           {/* Notifications */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="relative">
-                <Bell className="h-5 w-5" />
-                {notifications.filter(n => !n.read).length > 0 && (
-                  <Badge className="absolute -top-1 -right-1 h-4 w-4 p-0 flex items-center justify-center">
-                    {notifications.filter(n => !n.read).length}
-                  </Badge>
-                )}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-80">
-              <div className="flex items-center justify-between px-4 py-2 border-b">
-                <span className="font-medium">Notifications</span>
-                <Button variant="ghost" size="sm" className="text-xs">Mark all as read</Button>
-              </div>
-              {notifications.length > 0 ? (
-                notifications.map((notification) => (
-                  <DropdownMenuItem key={notification.id} className={`px-4 py-3 cursor-default ${notification.read ? 'opacity-60' : ''}`}>
-                    <div>
-                      <p className="text-sm">{notification.text}</p>
-                      <p className="text-xs text-muted-foreground mt-1">Just now</p>
-                    </div>
-                  </DropdownMenuItem>
-                ))
-              ) : (
-                <div className="px-4 py-6 text-center">
-                  <p className="text-sm text-muted-foreground">No notifications yet</p>
-                </div>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {user && <NotificationDropdown />}
 
           {/* Theme Toggle */}
           <Button
@@ -99,14 +97,61 @@ export const Header = () => {
             {theme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
           </Button>
           
-          <Link to="/login">
-            <Button variant="ghost" className="hidden md:inline-flex">
-              Sign In
-            </Button>
-          </Link>
-          <Link to="/book-cab">
-            <Button>Book a Cab</Button>
-          </Link>
+          {user ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="rounded-full">
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage 
+                      src={profile?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${profile?.full_name || user.email}`} 
+                      alt="Avatar" 
+                    />
+                    <AvatarFallback>
+                      {profile?.full_name?.[0] || user.email?.[0]?.toUpperCase() || 'U'}
+                    </AvatarFallback>
+                  </Avatar>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem className="cursor-default">
+                  <div>
+                    <p className="font-medium">{profile?.full_name || user.email}</p>
+                    <p className="text-xs text-muted-foreground mt-1">{user.email}</p>
+                  </div>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <Link to="/profile">
+                  <DropdownMenuItem className="cursor-pointer">
+                    <User className="mr-2 h-4 w-4" />
+                    <span>My Profile</span>
+                  </DropdownMenuItem>
+                </Link>
+                <Link to="/dashboard">
+                  <DropdownMenuItem className="cursor-pointer">
+                    <LayoutDashboard className="mr-2 h-4 w-4" />
+                    <span>Dashboard</span>
+                  </DropdownMenuItem>
+                </Link>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={signOut} className="cursor-pointer">
+                  <LogOut className="mr-2 h-4 w-4" />
+                  <span>Log out</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <>
+              <Link to="/login">
+                <Button variant="ghost" className="hidden md:inline-flex">
+                  Sign In
+                </Button>
+              </Link>
+              <Link to="/book-cab">
+                <Button>Book a Cab</Button>
+              </Link>
+            </>
+          )}
+          
           {isMobile && (
             <Button variant="ghost" size="icon" onClick={() => setMenuOpen(!menuOpen)}>
               <Menu className="h-5 w-5" />
@@ -147,13 +192,34 @@ export const Header = () => {
             >
               Dashboard
             </Link>
-            <Link 
-              to="/login" 
-              className="px-4 py-3 hover:bg-accent rounded-md transition-colors"
-              onClick={() => setMenuOpen(false)}
-            >
-              Sign In
-            </Link>
+            {user ? (
+              <>
+                <Link 
+                  to="/profile" 
+                  className="px-4 py-3 hover:bg-accent rounded-md transition-colors"
+                  onClick={() => setMenuOpen(false)}
+                >
+                  My Profile
+                </Link>
+                <button 
+                  className="text-left px-4 py-3 hover:bg-accent rounded-md transition-colors"
+                  onClick={() => {
+                    signOut();
+                    setMenuOpen(false);
+                  }}
+                >
+                  Log out
+                </button>
+              </>
+            ) : (
+              <Link 
+                to="/login" 
+                className="px-4 py-3 hover:bg-accent rounded-md transition-colors"
+                onClick={() => setMenuOpen(false)}
+              >
+                Sign In
+              </Link>
+            )}
           </nav>
         </div>
       )}

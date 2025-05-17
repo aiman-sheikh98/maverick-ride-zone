@@ -9,7 +9,125 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      notifications: {
+        Row: {
+          created_at: string
+          id: string
+          message: string
+          read: boolean
+          related_ride_id: string | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          message: string
+          read?: boolean
+          related_ride_id?: string | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          message?: string
+          read?: boolean
+          related_ride_id?: string | null
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_related_ride_id_fkey"
+            columns: ["related_ride_id"]
+            isOneToOne: false
+            referencedRelation: "rides"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          full_name: string | null
+          id: string
+          phone: string | null
+          updated_at: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          full_name?: string | null
+          id: string
+          phone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          full_name?: string | null
+          id?: string
+          phone?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      rides: {
+        Row: {
+          amount: number | null
+          created_at: string
+          date: string
+          driver_name: string | null
+          driver_rating: number | null
+          drop_location: string
+          id: string
+          passengers: number
+          pickup_location: string
+          status: string
+          time: string
+          user_id: string
+          vehicle_number: string | null
+          vehicle_type: string
+        }
+        Insert: {
+          amount?: number | null
+          created_at?: string
+          date: string
+          driver_name?: string | null
+          driver_rating?: number | null
+          drop_location: string
+          id?: string
+          passengers: number
+          pickup_location: string
+          status?: string
+          time: string
+          user_id: string
+          vehicle_number?: string | null
+          vehicle_type: string
+        }
+        Update: {
+          amount?: number | null
+          created_at?: string
+          date?: string
+          driver_name?: string | null
+          driver_rating?: number | null
+          drop_location?: string
+          id?: string
+          passengers?: number
+          pickup_location?: string
+          status?: string
+          time?: string
+          user_id?: string
+          vehicle_number?: string | null
+          vehicle_type?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
