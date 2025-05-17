@@ -23,6 +23,52 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { cn } from '@/lib/utils';
 import { Calendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from "@/components/ui/carousel";
+
+interface Vehicle {
+  id: string;
+  name: string;
+  image: string;
+  capacity: string;
+  type: string;
+}
+
+const vehicles: Vehicle[] = [
+  {
+    id: "sedan",
+    name: "Sedan",
+    image: "/vehicles/sedan.jpg",
+    capacity: "4",
+    type: "sedan"
+  },
+  {
+    id: "suv",
+    name: "SUV",
+    image: "/vehicles/suv.jpg",
+    capacity: "6",
+    type: "suv"
+  },
+  {
+    id: "luxury",
+    name: "Luxury",
+    image: "/vehicles/luxury.jpg",
+    capacity: "4",
+    type: "luxury"
+  },
+  {
+    id: "van",
+    name: "Van",
+    image: "/vehicles/van.jpg",
+    capacity: "8",
+    type: "van"
+  }
+];
 
 export const BookingForm = () => {
   const { toast } = useToast();
@@ -59,6 +105,10 @@ export const BookingForm = () => {
       vehicleType: '',
       passengers: '1',
     });
+  };
+
+  const handleVehicleSelect = (vehicleType: string) => {
+    setFormData(prev => ({ ...prev, vehicleType }));
   };
 
   return (
@@ -145,43 +195,61 @@ export const BookingForm = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="vehicleType">Vehicle Type</Label>
-              <Select 
-                onValueChange={(value) => setFormData(prev => ({ ...prev, vehicleType: value }))}
-                value={formData.vehicleType}
-              >
-                <SelectTrigger id="vehicleType">
-                  <SelectValue placeholder="Select vehicle" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="sedan">Sedan</SelectItem>
-                  <SelectItem value="suv">SUV</SelectItem>
-                  <SelectItem value="luxury">Luxury</SelectItem>
-                  <SelectItem value="van">Van</SelectItem>
-                </SelectContent>
-              </Select>
+          <div className="space-y-2">
+            <Label>Select Vehicle Type</Label>
+            <div className="relative mt-2">
+              <Carousel className="w-full">
+                <CarouselContent>
+                  {vehicles.map((vehicle) => (
+                    <CarouselItem key={vehicle.id} className="basis-full sm:basis-1/2 md:basis-1/2">
+                      <div 
+                        className={cn(
+                          "p-2 h-full flex flex-col items-center",
+                          formData.vehicleType === vehicle.id ? "bg-accent rounded-md" : ""
+                        )}
+                        onClick={() => handleVehicleSelect(vehicle.id)}
+                      >
+                        <div className="relative h-32 w-full overflow-hidden rounded-md mb-2">
+                          <img 
+                            src={vehicle.image} 
+                            alt={vehicle.name}
+                            className="h-full w-full object-cover"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).src = "/placeholder.svg";
+                            }}
+                          />
+                        </div>
+                        <div className="text-center">
+                          <p className="font-medium">{vehicle.name}</p>
+                          <p className="text-xs text-muted-foreground">Seats {vehicle.capacity}</p>
+                        </div>
+                      </div>
+                    </CarouselItem>
+                  ))}
+                </CarouselContent>
+                <CarouselPrevious className="left-0" />
+                <CarouselNext className="right-0" />
+              </Carousel>
             </div>
+          </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="passengers">Passengers</Label>
-              <Select 
-                onValueChange={(value) => setFormData(prev => ({ ...prev, passengers: value }))}
-                value={formData.passengers}
-              >
-                <SelectTrigger id="passengers">
-                  <SelectValue placeholder="# of people" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="1">1 Person</SelectItem>
-                  <SelectItem value="2">2 People</SelectItem>
-                  <SelectItem value="3">3 People</SelectItem>
-                  <SelectItem value="4">4 People</SelectItem>
-                  <SelectItem value="5+">5+ People</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="passengers">Passengers</Label>
+            <Select 
+              onValueChange={(value) => setFormData(prev => ({ ...prev, passengers: value }))}
+              value={formData.passengers}
+            >
+              <SelectTrigger id="passengers">
+                <SelectValue placeholder="# of people" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="1">1 Person</SelectItem>
+                <SelectItem value="2">2 People</SelectItem>
+                <SelectItem value="3">3 People</SelectItem>
+                <SelectItem value="4">4 People</SelectItem>
+                <SelectItem value="5+">5+ People</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <Button type="submit" className="w-full">
