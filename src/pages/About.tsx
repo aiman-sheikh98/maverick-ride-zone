@@ -1,10 +1,7 @@
-
 import React from 'react';
 import { Layout } from '@/components/layout/Layout';
-
 const About = () => {
-  return (
-    <Layout>
+  return <Layout>
       <div className="min-h-[80vh] py-16 hero-gradient">
         <div className="container px-4 mx-auto md:px-8">
           <div className="text-center mb-12">
@@ -37,14 +34,9 @@ const About = () => {
             </div>
             <div className="space-y-6">
               <div className="rounded-lg overflow-hidden shadow-lg">
-                <img 
-                  src="/images/about-1.jpg" 
-                  alt="Maverick Fleet"
-                  className="w-full h-64 object-cover"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).src = "/placeholder.svg";
-                  }}
-                />
+                <img alt="Maverick Fleet" onError={e => {
+                (e.target as HTMLImageElement).src = "/placeholder.svg";
+              }} src="https://img.freepik.com/free-vector/taxi-app-concept_23-2148496627.jpg?semt=ais_hybrid&w=740" className="w-full h-64 object-contain" />
               </div>
               <div className="bg-card rounded-lg p-6 shadow-lg">
                 <h3 className="text-xl font-bold mb-2">Why Choose Maverick?</h3>
@@ -79,8 +71,6 @@ const About = () => {
           </div>
         </div>
       </div>
-    </Layout>
-  );
+    </Layout>;
 };
-
 export default About;
