@@ -1,5 +1,6 @@
 
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   Card, 
   CardContent, 
@@ -30,6 +31,8 @@ import {
   CarouselNext,
   CarouselPrevious,
 } from "@/components/ui/carousel";
+import { useAuth } from '@/hooks/use-auth';
+import { supabase } from '@/integrations/supabase/client';
 
 interface Vehicle {
   id: string;
@@ -72,6 +75,9 @@ const vehicles: Vehicle[] = [
 
 export const BookingForm = () => {
   const { toast } = useToast();
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     pickupLocation: '',
     dropLocation: '',
@@ -86,25 +92,67 @@ export const BookingForm = () => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Here you would send the booking data to your backend
-    console.log('Booking form submitted:', formData);
     
-    toast({
-      title: "Booking Requested",
-      description: "Your cab booking request has been submitted!",
-    });
-
-    // Reset form
-    setFormData({
-      pickupLocation: '',
-      dropLocation: '',
-      date: undefined,
-      time: '',
-      vehicleType: '',
-      passengers: '1',
-    });
+    if (!user) {
+      toast({
+        title: "Authentication Required",
+        description: "Please sign in to book a ride.",
+        variant: "destructive"
+      });
+      navigate('/login');
+      return;
+    }
+    
+    if (!formData.date) {
+      toast({
+        title: "Date Required",
+        description: "Please select a date for your ride.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    setLoading(true);
+    
+    try {
+      const { data, error } = await supabase
+        .from('rides')
+        .insert({
+          user_id: user.id,
+          pickup_location: formData.pickupLocation,
+          drop_location: formData.dropLocation,
+          date: format(formData.date, 'yyyy-MM-dd'),
+          time: formData.time,
+          vehicle_type: formData.vehicleType,
+          passengers: parseInt(formData.passengers, 10),
+          status: 'upcoming'
+        })
+        .select();
+      
+      if (error) {
+        throw error;
+      }
+      
+      toast({
+        title: "Booking Confirmed",
+        description: "Your cab booking request has been submitted!",
+      });
+      
+      // Redirect to dashboard to see the new booking
+      navigate('/dashboard');
+      
+    } catch (error) {
+      console.error('Error booking ride:', error);
+      toast({
+        title: "Booking Failed",
+        description: "There was an error processing your booking. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleVehicleSelect = (vehicleType: string) => {
@@ -204,7 +252,7 @@ export const BookingForm = () => {
                     <CarouselItem key={vehicle.id} className="basis-full sm:basis-1/2 md:basis-1/2">
                       <div 
                         className={cn(
-                          "p-2 h-full flex flex-col items-center",
+                          "p-2 h-full flex flex-col items-center cursor-pointer",
                           formData.vehicleType === vehicle.id ? "bg-accent rounded-md" : ""
                         )}
                         onClick={() => handleVehicleSelect(vehicle.id)}
@@ -252,8 +300,8 @@ export const BookingForm = () => {
             </Select>
           </div>
 
-          <Button type="submit" className="w-full">
-            Request Cab
+          <Button type="submit" className="w-full" disabled={loading}>
+            {loading ? "Processing..." : "Request Cab"}
           </Button>
         </form>
       </CardContent>

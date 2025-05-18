@@ -15,6 +15,7 @@ import ServiceAreas from "./pages/ServiceAreas";
 import About from "./pages/About";
 import Dashboard from "./pages/Dashboard";
 import Profile from "./pages/Profile";
+import Help from "./pages/Help";
 
 // Admin Routes
 import AdminDashboard from "./pages/admin/Dashboard";
@@ -35,6 +36,7 @@ const AppRoutes = () => (
     <Route path="/about" element={<About />} />
     <Route path="/dashboard" element={<Dashboard />} />
     <Route path="/profile" element={<Profile />} />
+    <Route path="/help" element={<Help />} />
     
     {/* Admin Routes */}
     <Route path="/admin/dashboard" element={<AdminDashboard />} />

@@ -9,7 +9,8 @@ import {
   Sun, 
   LayoutDashboard, 
   User,
-  LogOut 
+  LogOut,
+  HelpCircle
 } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useTheme } from '@/hooks/use-theme';
@@ -81,6 +82,13 @@ export const Header = () => {
           <Link to="/dashboard">
             <Button variant="ghost" size="icon" aria-label="Dashboard">
               <LayoutDashboard className="h-5 w-5" />
+            </Button>
+          </Link>
+
+          {/* Help Section Link */}
+          <Link to="/help">
+            <Button variant="ghost" size="icon" aria-label="Help & Support">
+              <HelpCircle className="h-5 w-5" />
             </Button>
           </Link>
 
@@ -191,6 +199,13 @@ export const Header = () => {
               onClick={() => setMenuOpen(false)}
             >
               Dashboard
+            </Link>
+            <Link 
+              to="/help" 
+              className="px-4 py-3 hover:bg-accent rounded-md transition-colors"
+              onClick={() => setMenuOpen(false)}
+            >
+              Help & Support
             </Link>
             {user ? (
               <>

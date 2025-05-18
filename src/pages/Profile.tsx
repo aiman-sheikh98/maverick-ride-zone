@@ -43,6 +43,28 @@ const Profile = () => {
 
         if (error) {
           console.error('Error fetching profile:', error);
+          // If the profile doesn't exist, create one
+          if (error.code === 'PGRST116') {
+            const { data: newProfile, error: createError } = await supabase
+              .from('profiles')
+              .insert({
+                id: user.id,
+                full_name: '',
+                phone: '',
+                avatar_url: ''
+              })
+              .select()
+              .single();
+              
+            if (!createError && newProfile) {
+              setProfile(newProfile);
+              setFullName(newProfile.full_name || '');
+              setPhone(newProfile.phone || '');
+              setAvatarUrl(newProfile.avatar_url || '');
+            } else {
+              console.error('Error creating profile:', createError);
+            }
+          }
         } else {
           setProfile(data);
           setFullName(data.full_name || '');
@@ -101,25 +123,47 @@ const Profile = () => {
   const uploadAvatar = async (event: React.ChangeEvent<HTMLInputElement>) => {
     try {
       setUploadingAvatar(true);
-      if (!event.target.files || event.target.files.length === 0) {
+      if (!event.target.files || event.target.files.length === 0 || !user) {
         return;
       }
 
       const file = event.target.files[0];
       const fileExt = file.name.split('.').pop();
-      const filePath = `avatars/${user?.id}/avatar.${fileExt}`;
-
-      // For now, we'll just mock the avatar upload since we haven't set up storage
-      // In a real implementation, you would upload to Supabase storage
-      setTimeout(() => {
-        const mockUrl = `https://api.dicebear.com/7.x/avataaars/svg?seed=${fullName || 'user'}`;
-        setAvatarUrl(mockUrl);
-        setUploadingAvatar(false);
+      const filePath = `avatars/${user.id}/avatar.${fileExt}`;
+      
+      // Upload to Supabase Storage
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, file, { upsert: true });
+        
+      if (uploadError) {
+        throw uploadError;
+      }
+      
+      // Get the public URL
+      const { data: publicUrlData } = await supabase.storage
+        .from('avatars')
+        .getPublicUrl(filePath);
+        
+      if (publicUrlData) {
+        const avatarUrl = publicUrlData.publicUrl;
+        setAvatarUrl(avatarUrl);
+        
+        // Update the profile with the new avatar URL
+        const { error: updateError } = await supabase
+          .from('profiles')
+          .update({ avatar_url: avatarUrl })
+          .eq('id', user.id);
+          
+        if (updateError) {
+          throw updateError;
+        }
+        
         toast({
           title: "Avatar updated",
           description: "Your avatar has been updated successfully.",
         });
-      }, 1000);
+      }
     } catch (error) {
       console.error('Avatar upload error:', error);
       toast({
@@ -127,6 +171,7 @@ const Profile = () => {
         description: "An unexpected error occurred. Please try again.",
         variant: "destructive",
       });
+    } finally {
       setUploadingAvatar(false);
     }
   };
