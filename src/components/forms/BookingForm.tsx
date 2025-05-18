@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -19,7 +18,7 @@ import {
   SelectValue
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { CalendarIcon, Clock, MapPin } from 'lucide-react';
+import { CalendarIcon, Clock, MapPin, Car, Truck } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
 import { Calendar } from '@/components/ui/calendar';
@@ -40,6 +39,7 @@ interface Vehicle {
   image: string;
   capacity: string;
   type: string;
+  icon: React.ReactNode;
 }
 
 const vehicles: Vehicle[] = [
@@ -48,28 +48,32 @@ const vehicles: Vehicle[] = [
     name: "Sedan",
     image: "/vehicles/sedan.jpg",
     capacity: "4",
-    type: "sedan"
+    type: "sedan",
+    icon: <Car className="h-6 w-6" />
   },
   {
     id: "suv",
     name: "SUV",
     image: "/vehicles/suv.jpg",
     capacity: "6",
-    type: "suv"
+    type: "suv",
+    icon: <Car className="h-6 w-6" />
   },
   {
     id: "luxury",
     name: "Luxury",
     image: "/vehicles/luxury.jpg",
     capacity: "4",
-    type: "luxury"
+    type: "luxury",
+    icon: <Car className="h-6 w-6" />
   },
   {
     id: "van",
     name: "Van",
     image: "/vehicles/van.jpg",
     capacity: "8",
-    type: "van"
+    type: "van",
+    icon: <Truck className="h-6 w-6" />
   }
 ];
 
@@ -258,12 +262,17 @@ export const BookingForm = () => {
                         onClick={() => handleVehicleSelect(vehicle.id)}
                       >
                         <div className="relative h-32 w-full overflow-hidden rounded-md mb-2">
+                          <div className="absolute inset-0 flex items-center justify-center bg-muted">
+                            {vehicle.icon}
+                          </div>
                           <img 
                             src={vehicle.image} 
                             alt={vehicle.name}
                             className="h-full w-full object-cover"
                             onError={(e) => {
-                              (e.target as HTMLImageElement).src = "/placeholder.svg";
+                              const target = e.target as HTMLImageElement;
+                              target.style.display = 'none';
+                              target.previousElementSibling?.classList.remove('hidden');
                             }}
                           />
                         </div>
