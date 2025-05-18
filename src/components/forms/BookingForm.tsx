@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -8,74 +9,16 @@ import {
   CardTitle 
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { 
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { CalendarIcon, Clock, MapPin, Car, Truck } from 'lucide-react';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { cn } from '@/lib/utils';
-import { Calendar } from '@/components/ui/calendar';
-import { format } from 'date-fns';
-import {
-  Carousel,
-  CarouselContent,
-  CarouselItem,
-  CarouselNext,
-  CarouselPrevious,
-} from "@/components/ui/carousel";
 import { useAuth } from '@/hooks/use-auth';
 import { supabase } from '@/integrations/supabase/client';
+import { format } from 'date-fns';
 
-interface Vehicle {
-  id: string;
-  name: string;
-  image: string;
-  capacity: string;
-  type: string;
-  icon: React.ReactNode;
-}
-
-const vehicles: Vehicle[] = [
-  {
-    id: "sedan",
-    name: "Sedan",
-    image: "/vehicles/sedan.jpg",
-    capacity: "4",
-    type: "sedan",
-    icon: <Car className="h-6 w-6" />
-  },
-  {
-    id: "suv",
-    name: "SUV",
-    image: "/vehicles/suv.jpg",
-    capacity: "6",
-    type: "suv",
-    icon: <Car className="h-6 w-6" />
-  },
-  {
-    id: "luxury",
-    name: "Luxury",
-    image: "/vehicles/luxury.jpg",
-    capacity: "4",
-    type: "luxury",
-    icon: <Car className="h-6 w-6" />
-  },
-  {
-    id: "van",
-    name: "Van",
-    image: "/vehicles/van.jpg",
-    capacity: "8",
-    type: "van",
-    icon: <Truck className="h-6 w-6" />
-  }
-];
+// Import our new components
+import { VehicleSelector } from '@/components/booking/VehicleSelector';
+import { LocationInputs } from '@/components/booking/LocationInputs';
+import { DateTimePicker } from '@/components/booking/DateTimePicker';
+import { PassengerSelector } from '@/components/booking/PassengerSelector';
 
 export const BookingForm = () => {
   const { toast } = useToast();
@@ -163,6 +106,14 @@ export const BookingForm = () => {
     setFormData(prev => ({ ...prev, vehicleType }));
   };
 
+  const handleDateChange = (date: Date | undefined) => {
+    setFormData(prev => ({ ...prev, date }));
+  };
+
+  const handlePassengersChange = (passengers: string) => {
+    setFormData(prev => ({ ...prev, passengers }));
+  };
+
   return (
     <Card className="w-full max-w-md shadow-lg">
       <CardHeader>
@@ -171,143 +122,33 @@ export const BookingForm = () => {
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="pickupLocation">Pickup Location</Label>
-            <div className="relative">
-              <MapPin className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-              <Input
-                id="pickupLocation"
-                name="pickupLocation"
-                placeholder="Enter pickup address"
-                className="pl-10"
-                value={formData.pickupLocation}
-                onChange={handleChange}
-                required
-              />
-            </div>
-          </div>
+          <LocationInputs 
+            pickupLocation={formData.pickupLocation}
+            dropLocation={formData.dropLocation}
+            handleChange={handleChange}
+          />
+
+          <DateTimePicker 
+            date={formData.date}
+            time={formData.time}
+            onDateChange={handleDateChange}
+            onTimeChange={handleChange}
+          />
 
           <div className="space-y-2">
-            <Label htmlFor="dropLocation">Drop Location</Label>
-            <div className="relative">
-              <MapPin className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-              <Input
-                id="dropLocation"
-                name="dropLocation"
-                placeholder="Enter destination address"
-                className="pl-10"
-                value={formData.dropLocation}
-                onChange={handleChange}
-                required
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="date">Date</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      "w-full justify-start text-left font-normal",
-                      !formData.date && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {formData.date ? format(formData.date, "PPP") : "Select date"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={formData.date}
-                    onSelect={(date) => setFormData(prev => ({ ...prev, date }))}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="time">Time</Label>
-              <div className="relative">
-                <Clock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="time"
-                  name="time"
-                  type="time"
-                  className="pl-10"
-                  value={formData.time}
-                  onChange={handleChange}
-                  required
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Select Vehicle Type</Label>
+            <label>Select Vehicle Type</label>
             <div className="relative mt-2">
-              <Carousel className="w-full">
-                <CarouselContent>
-                  {vehicles.map((vehicle) => (
-                    <CarouselItem key={vehicle.id} className="basis-full sm:basis-1/2 md:basis-1/2">
-                      <div 
-                        className={cn(
-                          "p-2 h-full flex flex-col items-center cursor-pointer",
-                          formData.vehicleType === vehicle.id ? "bg-accent rounded-md" : ""
-                        )}
-                        onClick={() => handleVehicleSelect(vehicle.id)}
-                      >
-                        <div className="relative h-32 w-full overflow-hidden rounded-md mb-2">
-                          <div className="absolute inset-0 flex items-center justify-center bg-muted">
-                            {vehicle.icon}
-                          </div>
-                          <img 
-                            src={vehicle.image} 
-                            alt={vehicle.name}
-                            className="h-full w-full object-cover"
-                            onError={(e) => {
-                              const target = e.target as HTMLImageElement;
-                              target.style.display = 'none';
-                              target.previousElementSibling?.classList.remove('hidden');
-                            }}
-                          />
-                        </div>
-                        <div className="text-center">
-                          <p className="font-medium">{vehicle.name}</p>
-                          <p className="text-xs text-muted-foreground">Seats {vehicle.capacity}</p>
-                        </div>
-                      </div>
-                    </CarouselItem>
-                  ))}
-                </CarouselContent>
-                <CarouselPrevious className="left-0" />
-                <CarouselNext className="right-0" />
-              </Carousel>
+              <VehicleSelector 
+                selectedVehicleType={formData.vehicleType}
+                onVehicleSelect={handleVehicleSelect}
+              />
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="passengers">Passengers</Label>
-            <Select 
-              onValueChange={(value) => setFormData(prev => ({ ...prev, passengers: value }))}
-              value={formData.passengers}
-            >
-              <SelectTrigger id="passengers">
-                <SelectValue placeholder="# of people" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="1">1 Person</SelectItem>
-                <SelectItem value="2">2 People</SelectItem>
-                <SelectItem value="3">3 People</SelectItem>
-                <SelectItem value="4">4 People</SelectItem>
-                <SelectItem value="5+">5+ People</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          <PassengerSelector 
+            passengers={formData.passengers}
+            onPassengersChange={handlePassengersChange}
+          />
 
           <Button type="submit" className="w-full" disabled={loading}>
             {loading ? "Processing..." : "Request Cab"}
