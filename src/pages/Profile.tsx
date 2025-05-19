@@ -11,12 +11,31 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Label } from '@/components/ui/label';
 import { Loader2, Upload } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
+import { format } from 'date-fns';
 
 type ProfileData = {
   id: string;
   full_name: string | null;
   phone: string | null;
   avatar_url: string | null;
+};
+
+type Ride = {
+  id: string;
+  pickup_location: string;
+  drop_location: string;
+  date: string;
+  time: string;
+  vehicle_type: string;
+  passengers: number;
+  status: string;
+  driver_name: string | null;
+  driver_rating: number | null;
+  vehicle_number: string | null;
+  amount: number | null;
+  created_at: string;
 };
 
 const Profile = () => {
@@ -29,6 +48,8 @@ const Profile = () => {
   const [phone, setPhone] = useState('');
   const [avatarUrl, setAvatarUrl] = useState('');
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [rides, setRides] = useState<Ride[]>([]);
+  const [loadingRides, setLoadingRides] = useState(false);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -176,6 +197,63 @@ const Profile = () => {
     }
   };
 
+  // Fetch user's rides
+  const fetchRides = async () => {
+    if (!user) return;
+    
+    setLoadingRides(true);
+    try {
+      const { data, error } = await supabase
+        .from('rides')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+      
+      if (error) {
+        throw error;
+      }
+      
+      setRides(data || []);
+    } catch (error) {
+      console.error('Error fetching rides:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load ride history.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingRides(false);
+    }
+  };
+
+  // Load rides when the rides tab is selected
+  const handleTabChange = (value: string) => {
+    if (value === 'rides' && rides.length === 0) {
+      fetchRides();
+    }
+  };
+
+  // Format ride status for display
+  const formatRideStatus = (status: string) => {
+    return status.charAt(0).toUpperCase() + status.slice(1).replace('_', ' ');
+  };
+
+  // Get badge variant based on ride status
+  const getBadgeVariant = (status: string) => {
+    switch (status) {
+      case 'completed':
+        return 'secondary';
+      case 'cancelled':
+        return 'destructive';
+      case 'pending_payment':
+        return 'outline';
+      case 'upcoming':
+        return 'default';
+      default:
+        return 'outline';
+    }
+  };
+
   if (loading) {
     return (
       <Layout>
@@ -192,10 +270,11 @@ const Profile = () => {
         <div className="container px-4 mx-auto md:px-8">
           <h1 className="text-3xl font-bold mb-8">My Profile</h1>
           
-          <Tabs defaultValue="profile" className="w-full">
-            <TabsList className="grid w-full md:w-[400px] grid-cols-2 mb-8">
+          <Tabs defaultValue="profile" className="w-full" onValueChange={handleTabChange}>
+            <TabsList className="grid w-full md:w-[600px] grid-cols-3 mb-8">
               <TabsTrigger value="profile">Profile</TabsTrigger>
               <TabsTrigger value="account">Account</TabsTrigger>
+              <TabsTrigger value="rides">My Rides</TabsTrigger>
             </TabsList>
             
             <TabsContent value="profile">
@@ -292,6 +371,67 @@ const Profile = () => {
                   <Button variant="outline">Change Password</Button>
                   <Button variant="destructive">Delete Account</Button>
                 </CardFooter>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="rides">
+              <Card>
+                <CardHeader>
+                  <CardTitle>My Ride History</CardTitle>
+                  <CardDescription>View all your booked rides</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {loadingRides ? (
+                    <div className="flex justify-center py-8">
+                      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                    </div>
+                  ) : rides.length > 0 ? (
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Date & Time</TableHead>
+                            <TableHead>From / To</TableHead>
+                            <TableHead>Vehicle</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead>Amount</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {rides.map((ride) => (
+                            <TableRow key={ride.id}>
+                              <TableCell>
+                                <div className="font-medium">{format(new Date(ride.date), 'MMM dd, yyyy')}</div>
+                                <div className="text-sm text-muted-foreground">{ride.time}</div>
+                              </TableCell>
+                              <TableCell>
+                                <div className="font-medium truncate max-w-[200px]">{ride.pickup_location}</div>
+                                <div className="text-sm text-muted-foreground truncate max-w-[200px]">to {ride.drop_location}</div>
+                              </TableCell>
+                              <TableCell>{ride.vehicle_type}</TableCell>
+                              <TableCell>
+                                <Badge variant={getBadgeVariant(ride.status)}>
+                                  {formatRideStatus(ride.status)}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>
+                                {ride.amount ? `$${(ride.amount / 100).toFixed(2)}` : '-'}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  ) : (
+                    <div className="text-center py-8">
+                      <p className="text-lg font-medium text-muted-foreground">No ride history yet</p>
+                      <p className="text-sm text-muted-foreground mt-1">Book a cab to start your journey</p>
+                      <Button className="mt-4" onClick={() => window.location.href = '/book-cab'}>
+                        Book a Cab
+                      </Button>
+                    </div>
+                  )}
+                </CardContent>
               </Card>
             </TabsContent>
           </Tabs>

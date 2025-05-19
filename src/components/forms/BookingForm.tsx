@@ -14,11 +14,12 @@ import { useAuth } from '@/hooks/use-auth';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 
-// Import our new components
+// Import our components
 import { VehicleSelector } from '@/components/booking/VehicleSelector';
 import { LocationInputs } from '@/components/booking/LocationInputs';
 import { DateTimePicker } from '@/components/booking/DateTimePicker';
 import { PassengerSelector } from '@/components/booking/PassengerSelector';
+import { PaymentDialog } from '@/components/payment/PaymentDialog';
 
 export const BookingForm = () => {
   const { toast } = useToast();
@@ -33,6 +34,8 @@ export const BookingForm = () => {
     vehicleType: '',
     passengers: '1',
   });
+  const [showPayment, setShowPayment] = useState(false);
+  const [currentRideId, setCurrentRideId] = useState<string | null>(null);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -74,7 +77,7 @@ export const BookingForm = () => {
           time: formData.time,
           vehicle_type: formData.vehicleType,
           passengers: parseInt(formData.passengers, 10),
-          status: 'upcoming'
+          status: 'pending_payment'
         })
         .select();
       
@@ -82,13 +85,11 @@ export const BookingForm = () => {
         throw error;
       }
       
-      toast({
-        title: "Booking Confirmed",
-        description: "Your cab booking request has been submitted!",
-      });
+      const rideId = data[0].id;
+      setCurrentRideId(rideId);
       
-      // Redirect to dashboard to see the new booking
-      navigate('/dashboard');
+      // Show payment dialog instead of redirecting
+      setShowPayment(true);
       
     } catch (error) {
       console.error('Error booking ride:', error);
@@ -114,47 +115,64 @@ export const BookingForm = () => {
     setFormData(prev => ({ ...prev, passengers }));
   };
 
+  const handleClosePayment = () => {
+    setShowPayment(false);
+  };
+
   return (
-    <Card className="w-full max-w-md shadow-lg">
-      <CardHeader>
-        <CardTitle>Book a Cab</CardTitle>
-        <CardDescription>Enter your trip details to request a cab</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <LocationInputs 
-            pickupLocation={formData.pickupLocation}
-            dropLocation={formData.dropLocation}
-            handleChange={handleChange}
-          />
+    <>
+      <Card className="w-full max-w-md shadow-lg">
+        <CardHeader>
+          <CardTitle>Book a Cab</CardTitle>
+          <CardDescription>Enter your trip details to request a cab</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <LocationInputs 
+              pickupLocation={formData.pickupLocation}
+              dropLocation={formData.dropLocation}
+              handleChange={handleChange}
+            />
 
-          <DateTimePicker 
-            date={formData.date}
-            time={formData.time}
-            onDateChange={handleDateChange}
-            onTimeChange={handleChange}
-          />
+            <DateTimePicker 
+              date={formData.date}
+              time={formData.time}
+              onDateChange={handleDateChange}
+              onTimeChange={handleChange}
+            />
 
-          <div className="space-y-2">
-            <label>Select Vehicle Type</label>
-            <div className="relative mt-2">
-              <VehicleSelector 
-                selectedVehicleType={formData.vehicleType}
-                onVehicleSelect={handleVehicleSelect}
-              />
+            <div className="space-y-2">
+              <label>Select Vehicle Type</label>
+              <div className="relative mt-2">
+                <VehicleSelector 
+                  selectedVehicleType={formData.vehicleType}
+                  onVehicleSelect={handleVehicleSelect}
+                />
+              </div>
             </div>
-          </div>
 
-          <PassengerSelector 
-            passengers={formData.passengers}
-            onPassengersChange={handlePassengersChange}
-          />
+            <PassengerSelector 
+              passengers={formData.passengers}
+              onPassengersChange={handlePassengersChange}
+            />
 
-          <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? "Processing..." : "Request Cab"}
-          </Button>
-        </form>
-      </CardContent>
-    </Card>
+            <Button type="submit" className="w-full" disabled={loading}>
+              {loading ? "Processing..." : "Request Cab"}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+
+      <PaymentDialog
+        open={showPayment}
+        onClose={handleClosePayment}
+        rideDetails={currentRideId ? {
+          rideId: currentRideId,
+          pickupLocation: formData.pickupLocation,
+          dropLocation: formData.dropLocation,
+          vehicleType: formData.vehicleType,
+        } : null}
+      />
+    </>
   );
 };
