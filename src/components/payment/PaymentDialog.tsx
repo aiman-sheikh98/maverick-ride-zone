@@ -57,13 +57,43 @@ export const PaymentDialog = ({ open, onClose, rideDetails }: PaymentDialogProps
     getPaymentIntent();
   }, [open, rideDetails, onClose, toast]);
 
-  const handlePaymentSuccess = () => {
-    toast({
-      title: 'Payment Successful',
-      description: 'Your ride has been confirmed.',
-    });
-    onClose();
-    navigate('/dashboard');
+  const handlePaymentSuccess = async () => {
+    if (!rideDetails?.rideId) return;
+    
+    try {
+      // Update the ride status to completed and set the amount
+      const { error } = await supabase
+        .from('rides')
+        .update({ 
+          status: 'completed',
+          amount: amount / 100 // Convert cents to dollars
+        })
+        .eq('id', rideDetails.rideId);
+      
+      if (error) {
+        console.error('Error updating ride status:', error);
+        toast({
+          title: 'Update Failed',
+          description: 'Your payment was successful, but we couldn\'t update your ride status.',
+          variant: 'destructive',
+        });
+      } else {
+        toast({
+          title: 'Payment Successful',
+          description: 'Your ride has been confirmed.',
+        });
+      }
+      
+      onClose();
+      navigate('/dashboard');
+    } catch (err) {
+      console.error('Error in payment success handler:', err);
+      toast({
+        title: 'Error',
+        description: 'An unexpected error occurred after payment.',
+        variant: 'destructive',
+      });
+    }
   };
 
   const handleCancel = () => {

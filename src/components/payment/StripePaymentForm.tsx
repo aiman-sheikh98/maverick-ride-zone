@@ -27,6 +27,15 @@ const PaymentForm = ({ onSuccess, onCancel, amount }: Omit<StripePaymentFormProp
   const elements = useElements();
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | undefined>();
+  const [paymentElement, setPaymentElement] = useState<any>(null);
+  
+  useEffect(() => {
+    // We need to make sure elements are ready before trying to get elements
+    if (elements) {
+      const element = elements.getElement(PaymentElement);
+      setPaymentElement(element);
+    }
+  }, [elements]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -40,13 +49,6 @@ const PaymentForm = ({ onSuccess, onCancel, amount }: Omit<StripePaymentFormProp
     setErrorMessage(undefined);
 
     try {
-      // Make sure elements are fully loaded before attempting to confirm payment
-      const element = elements.getElement('payment');
-      
-      if (!element) {
-        throw new Error('Payment Element not found');
-      }
-      
       const { error } = await stripe.confirmPayment({
         elements,
         confirmParams: {
@@ -56,12 +58,14 @@ const PaymentForm = ({ onSuccess, onCancel, amount }: Omit<StripePaymentFormProp
       });
 
       if (error) {
+        console.error('Payment confirmation error:', error);
         setErrorMessage(error.message);
       } else {
         // Payment succeeded
+        console.log('Payment successful');
         onSuccess();
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Payment error:', error);
       setErrorMessage('An unexpected error occurred. Please try again.');
     } finally {
@@ -98,7 +102,6 @@ const PaymentForm = ({ onSuccess, onCancel, amount }: Omit<StripePaymentFormProp
 
 // The outer component that provides the Stripe Elements context
 export const StripePaymentForm = ({ clientSecret, onSuccess, onCancel, amount }: StripePaymentFormProps) => {
-  // Fix: Use the correct type for options
   const options = {
     clientSecret,
     appearance: {
