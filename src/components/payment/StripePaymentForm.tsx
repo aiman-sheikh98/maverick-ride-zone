@@ -91,10 +91,11 @@ const PaymentForm = ({ onSuccess, onCancel, amount }: Omit<StripePaymentFormProp
 
 // The outer component that provides the Stripe Elements context
 export const StripePaymentForm = ({ clientSecret, onSuccess, onCancel, amount }: StripePaymentFormProps) => {
+  // Fix: Use the correct type for options
   const options = {
     clientSecret,
     appearance: {
-      theme: 'stripe',
+      theme: 'stripe' as const, // Use type assertion here
     },
   };
 
