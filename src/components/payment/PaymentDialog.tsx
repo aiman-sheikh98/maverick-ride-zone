@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { StripePaymentForm } from './StripePaymentForm';
 import { Loader2 } from 'lucide-react';
@@ -75,6 +75,9 @@ export const PaymentDialog = ({ open, onClose, rideDetails }: PaymentDialogProps
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Complete Your Booking</DialogTitle>
+          <DialogDescription>
+            Please complete the payment to confirm your ride booking.
+          </DialogDescription>
         </DialogHeader>
 
         {isLoading ? (

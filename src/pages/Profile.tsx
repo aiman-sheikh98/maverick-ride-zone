@@ -29,45 +29,58 @@ const Profile = () => {
       if (!user) return;
 
       try {
+        // First check if the profile exists
         const { data, error } = await supabase
           .from('profiles')
           .select('*')
           .eq('id', user.id)
-          .single();
+          .maybeSingle();
 
-        if (error) {
-          console.error('Error fetching profile:', error);
-          // If the profile doesn't exist, create one
-          if (error.code === 'PGRST116') {
-            const { data: newProfile, error: createError } = await supabase
-              .from('profiles')
-              .insert({
-                id: user.id,
-                full_name: '',
-                phone: '',
-                avatar_url: ''
-              })
-              .select()
-              .single();
-              
-            if (!createError && newProfile) {
-              setProfile(newProfile);
-            } else {
-              console.error('Error creating profile:', createError);
-            }
-          }
-        } else {
+        if (error && error.code !== 'PGRST116') {
+          throw error;
+        }
+        
+        if (data) {
+          // Profile exists
           setProfile(data);
+        } else {
+          // Profile doesn't exist, create one - we need to use service role key
+          // For security, we'll do this insert directly, no RLS needed for insert
+          const { data: newProfile, error: insertError } = await supabase
+            .from('profiles')
+            .insert({
+              id: user.id,
+              full_name: '',
+              phone: '',
+              avatar_url: ''
+            })
+            .select();
+            
+          if (insertError) {
+            console.error('Error creating profile:', insertError);
+            toast({
+              title: "Profile Creation Error",
+              description: "There was an error setting up your profile.",
+              variant: "destructive"
+            });
+          } else if (newProfile && newProfile.length > 0) {
+            setProfile(newProfile[0] as ProfileData);
+          }
         }
       } catch (error) {
         console.error('Profile fetch error:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load profile data.",
+          variant: "destructive",
+        });
       } finally {
         setLoading(false);
       }
     };
 
     fetchProfile();
-  }, [user]);
+  }, [user, toast]);
 
   const updateProfile = async (fullName: string, phone: string, avatarUrl: string) => {
     if (!user) return;

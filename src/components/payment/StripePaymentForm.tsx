@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { loadStripe } from '@stripe/stripe-js';
 import { 
   Elements,
@@ -40,6 +40,13 @@ const PaymentForm = ({ onSuccess, onCancel, amount }: Omit<StripePaymentFormProp
     setErrorMessage(undefined);
 
     try {
+      // Make sure elements are fully loaded before attempting to confirm payment
+      const element = elements.getElement('payment');
+      
+      if (!element) {
+        throw new Error('Payment Element not found');
+      }
+      
       const { error } = await stripe.confirmPayment({
         elements,
         confirmParams: {
@@ -95,7 +102,7 @@ export const StripePaymentForm = ({ clientSecret, onSuccess, onCancel, amount }:
   const options = {
     clientSecret,
     appearance: {
-      theme: 'stripe' as const, // Use type assertion here
+      theme: 'stripe' as const,
     },
   };
 
