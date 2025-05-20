@@ -87,6 +87,8 @@ export type Database = {
           drop_location: string
           id: string
           passengers: number
+          payment_date: string | null
+          payment_intent_id: string | null
           pickup_location: string
           status: string
           time: string
@@ -103,6 +105,8 @@ export type Database = {
           drop_location: string
           id?: string
           passengers: number
+          payment_date?: string | null
+          payment_intent_id?: string | null
           pickup_location: string
           status?: string
           time: string
@@ -119,6 +123,8 @@ export type Database = {
           drop_location?: string
           id?: string
           passengers?: number
+          payment_date?: string | null
+          payment_intent_id?: string | null
           pickup_location?: string
           status?: string
           time?: string

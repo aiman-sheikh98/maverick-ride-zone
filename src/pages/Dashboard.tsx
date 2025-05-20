@@ -32,6 +32,8 @@ type Ride = {
   vehicle_number: string | null;
   amount: number | null;
   created_at: string;
+  payment_date?: string | null;
+  payment_intent_id?: string | null;
 };
 
 const Dashboard = () => {
@@ -155,7 +157,7 @@ const Dashboard = () => {
   const totalRides = rides.length;
   const upcomingRides = rides.filter(ride => ride.status === 'upcoming').length;
   const totalSpent = rides
-    .filter(ride => ride.status !== 'cancelled' && ride.amount)
+    .filter(ride => ride.status === 'paid' || ride.status === 'completed')
     .reduce((sum, ride) => sum + (ride.amount || 0), 0);
 
   if (loading) {
@@ -275,7 +277,7 @@ const Dashboard = () => {
                           <TableCell>
                             <Badge 
                               variant={
-                                ride.status === 'completed' ? 'secondary' : 
+                                ride.status === 'completed' || ride.status === 'paid' ? 'secondary' : 
                                 ride.status === 'cancelled' ? 'destructive' : 
                                 'default'
                               }
@@ -296,7 +298,16 @@ const Dashboard = () => {
                                 Cancel
                               </Button>
                             )}
-                            {ride.status === 'completed' && (
+                            {ride.status === 'pending_payment' && (
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => window.location.href = `/book-cab?ride_id=${ride.id}&payment=true`}
+                              >
+                                Pay Now
+                              </Button>
+                            )}
+                            {(ride.status === 'completed' || ride.status === 'paid') && (
                               <Button variant="outline" size="sm">
                                 Details
                               </Button>

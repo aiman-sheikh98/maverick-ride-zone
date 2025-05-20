@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Layout } from '@/components/layout/Layout';
 import { supabase } from '@/integrations/supabase/client';
@@ -24,6 +23,21 @@ const Profile = () => {
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
   const [activeTab, setActiveTab] = useState('profile');
+
+  // Check for payment success in URL
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const paymentSuccess = urlParams.get('payment_success');
+    const rideId = urlParams.get('ride_id');
+    
+    if (paymentSuccess === 'true' && rideId) {
+      // If there's a payment success parameter, switch to rides tab
+      setActiveTab('rides');
+      
+      // Clear the URL parameters but keep on the same page
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, []);
 
   useEffect(() => {
     const fetchProfile = async () => {

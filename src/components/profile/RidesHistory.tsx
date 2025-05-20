@@ -44,6 +44,7 @@ export const RidesHistory = ({ userId }: RidesHistoryProps) => {
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [rideDetails, setRideDetails] = useState<Ride | null>(null);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
+  const [paymentSuccessDialogOpen, setPaymentSuccessDialogOpen] = useState(false);
   const { toast } = useToast();
   
   useEffect(() => {
@@ -79,6 +80,26 @@ export const RidesHistory = ({ userId }: RidesHistoryProps) => {
       setFilteredRides(rides.filter(ride => ride.status === activeTab));
     }
   }, [rides, activeTab]);
+
+  // Check URL for payment success
+  useEffect(() => {
+    // Check if URL contains payment_success=true
+    const urlParams = new URLSearchParams(window.location.search);
+    const paymentSuccess = urlParams.get('payment_success');
+    const rideId = urlParams.get('ride_id');
+    
+    if (paymentSuccess === 'true' && rideId) {
+      // Find the ride in the list
+      const successRide = rides.find(ride => ride.id === rideId);
+      if (successRide) {
+        setRideDetails(successRide);
+        setPaymentSuccessDialogOpen(true);
+        
+        // Clear the URL parameters without refreshing the page
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
+    }
+  }, [rides]);
 
   const fetchRides = async () => {
     if (!userId) return;
@@ -154,6 +175,11 @@ export const RidesHistory = ({ userId }: RidesHistoryProps) => {
   const showRideDetails = (ride: Ride) => {
     setRideDetails(ride);
     setDetailsDialogOpen(true);
+  };
+
+  const closePaymentSuccessDialog = () => {
+    setPaymentSuccessDialogOpen(false);
+    setRideDetails(null);
   };
 
   const formatRideStatus = (status: string) => {
@@ -395,6 +421,65 @@ export const RidesHistory = ({ userId }: RidesHistoryProps) => {
             </div>
           )}
         </CardContent>
+
+        {/* Cancelled rides section */}
+        {activeTab === "all" && cancelledRides > 0 && (
+          <CardContent>
+            <div className="mb-4">
+              <h3 className="text-lg font-semibold flex items-center gap-2">
+                <X className="h-4 w-4 p-0.5 bg-destructive/10 rounded-full text-destructive" />
+                Cancelled Rides
+              </h3>
+              <p className="text-sm text-muted-foreground">History of cancelled rides</p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {rides
+                .filter(ride => ride.status === 'cancelled')
+                .slice(0, 3)
+                .map(ride => (
+                  <Card key={ride.id} className="bg-muted/10 hover:bg-muted/20 transition-colors">
+                    <CardHeader className="pb-2">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <CardTitle className="text-base">{format(new Date(ride.date), 'MMM dd, yyyy')}</CardTitle>
+                          <CardDescription>{ride.time}</CardDescription>
+                        </div>
+                        <Badge variant="destructive" className="flex items-center gap-1">
+                          <X className="h-3 w-3" /> Cancelled
+                        </Badge>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="pb-4">
+                      <div className="text-sm space-y-2">
+                        <div>
+                          <div className="text-xs text-muted-foreground">From</div>
+                          <div className="font-medium truncate">{ride.pickup_location}</div>
+                        </div>
+                        <div>
+                          <div className="text-xs text-muted-foreground">To</div>
+                          <div className="font-medium truncate">{ride.drop_location}</div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+            </div>
+            
+            {cancelledRides > 3 && (
+              <div className="mt-2 text-right">
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => setActiveTab("cancelled")}
+                  className="text-xs"
+                >
+                  View all cancelled rides →
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        )}
       </Card>
       
       {/* Cancel ride confirmation dialog */}
@@ -514,6 +599,62 @@ export const RidesHistory = ({ userId }: RidesHistoryProps) => {
                 Cancel Ride
               </Button>
             )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Payment Success Dialog */}
+      <Dialog open={paymentSuccessDialogOpen} onOpenChange={closePaymentSuccessDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-primary">
+              <Check className="h-5 w-5 p-0.5 rounded-full border border-primary" />
+              Payment Successful!
+            </DialogTitle>
+            <DialogDescription>
+              Your ride payment has been processed successfully
+            </DialogDescription>
+          </DialogHeader>
+          
+          {rideDetails && (
+            <div className="p-4 bg-muted/20 rounded-lg space-y-3">
+              <div className="flex justify-between">
+                <span className="text-sm text-muted-foreground">Amount Paid:</span>
+                <span className="font-bold text-lg">${rideDetails.amount?.toFixed(2)}</span>
+              </div>
+              
+              <div className="flex justify-between">
+                <span className="text-sm text-muted-foreground">Date:</span>
+                <span className="font-medium">{format(new Date(), 'PPP')}</span>
+              </div>
+              
+              <div className="flex justify-between">
+                <span className="text-sm text-muted-foreground">Status:</span>
+                <Badge variant="default" className="flex items-center gap-1">
+                  <Check className="h-3 w-3" /> Paid
+                </Badge>
+              </div>
+              
+              <div className="pt-2">
+                <div className="text-xs text-muted-foreground mb-1">Ride Details:</div>
+                <div className="text-sm font-medium">{rideDetails.pickup_location}</div>
+                <div className="text-xs text-muted-foreground my-1">to</div>
+                <div className="text-sm font-medium">{rideDetails.drop_location}</div>
+              </div>
+            </div>
+          )}
+          
+          <div className="bg-primary/5 p-3 rounded-md border border-primary/10 text-center">
+            <p className="text-sm">Thank you for your payment! Your ride is now confirmed.</p>
+          </div>
+          
+          <DialogFooter className="flex justify-center sm:justify-center pt-2">
+            <Button 
+              onClick={closePaymentSuccessDialog}
+              className="transition-all hover:scale-105 w-full sm:w-auto"
+            >
+              Close
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
