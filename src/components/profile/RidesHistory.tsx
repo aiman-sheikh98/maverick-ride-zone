@@ -23,7 +23,9 @@ type Ride = {
   vehicle_number: string | null;
   amount: number | null;
   created_at: string;
-  payment_date: string | null;
+  payment_date?: string | null;
+  payment_intent_id?: string | null;
+  user_id: string;
 };
 
 interface RidesHistoryProps {
@@ -75,7 +77,8 @@ export const RidesHistory = ({ userId }: RidesHistoryProps) => {
         throw error;
       }
       
-      setRides(data || []);
+      // Make sure data conforms to our Ride type
+      setRides(data as Ride[]);
     } catch (error) {
       console.error('Error fetching rides:', error);
       toast({
