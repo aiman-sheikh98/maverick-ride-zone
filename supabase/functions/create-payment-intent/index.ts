@@ -115,6 +115,17 @@ const handleRequest = async (req: Request) => {
       
       logStep('Payment intent created', { id: paymentIntent.id });
 
+      // Update ride record with payment intent ID for reference
+      const { error: updateError } = await supabaseClient
+        .from('rides')
+        .update({ payment_intent_id: paymentIntent.id })
+        .eq('id', rideDetails.rideId);
+        
+      if (updateError) {
+        logStep('Failed to update ride with payment intent', updateError);
+        // Non-critical error, continue
+      }
+
       // Return the client secret to the client
       return new Response(JSON.stringify({ 
         clientSecret: paymentIntent.client_secret,

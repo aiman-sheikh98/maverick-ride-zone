@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { StripePaymentForm } from './StripePaymentForm';
-import { Loader2 } from 'lucide-react';
+import { Loader2, CreditCard } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
 
@@ -25,6 +25,8 @@ export const PaymentDialog = ({ open, onClose, rideDetails }: PaymentDialogProps
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
+  const [retryCount, setRetryCount] = useState(0);
+  const maxRetries = 3;
 
   useEffect(() => {
     const getPaymentIntent = async () => {
@@ -41,6 +43,13 @@ export const PaymentDialog = ({ open, onClose, rideDetails }: PaymentDialogProps
 
         if (error) {
           console.error('Error response from payment intent function:', error);
+          
+          if (retryCount < maxRetries) {
+            setRetryCount(prev => prev + 1);
+            setTimeout(() => getPaymentIntent(), 1500); // Retry after 1.5 seconds
+            return;
+          }
+          
           setError('Unable to set up payment. Please try again.');
           toast({
             title: 'Payment Setup Failed',
@@ -64,6 +73,7 @@ export const PaymentDialog = ({ open, onClose, rideDetails }: PaymentDialogProps
         console.log('Payment intent created successfully');
         setClientSecret(data.clientSecret);
         setAmount(data.amount);
+        setRetryCount(0); // Reset retry count on success
       } catch (err) {
         console.error('Error fetching payment intent:', err);
         setError('An unexpected error occurred. Please try again.');
@@ -78,19 +88,19 @@ export const PaymentDialog = ({ open, onClose, rideDetails }: PaymentDialogProps
     };
 
     getPaymentIntent();
-  }, [open, rideDetails, onClose, toast]);
+  }, [open, rideDetails, onClose, toast, retryCount]);
 
   const handlePaymentSuccess = async () => {
     if (!rideDetails?.rideId) return;
     
     try {
-      console.log('Updating ride status to completed');
+      console.log('Updating ride status to paid');
       setIsLoading(true);
-      // Update the ride status to completed and set the amount
+      // Update the ride status to paid and set the amount
       const { error } = await supabase
         .from('rides')
         .update({ 
-          status: 'completed',
+          status: 'paid',
           amount: amount / 100, // Convert cents to dollars
           payment_date: new Date().toISOString()
         })
@@ -132,15 +142,19 @@ export const PaymentDialog = ({ open, onClose, rideDetails }: PaymentDialogProps
     <Dialog open={open} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Complete Your Booking</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            <CreditCard className="h-5 w-5 text-primary" />
+            Complete Your Payment
+          </DialogTitle>
           <DialogDescription>
             Please complete the payment to confirm your ride booking.
           </DialogDescription>
         </DialogHeader>
 
         {isLoading ? (
-          <div className="flex justify-center py-8">
+          <div className="flex flex-col items-center justify-center py-8 space-y-3">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <p className="text-sm text-muted-foreground">Setting up payment...</p>
           </div>
         ) : error ? (
           <div className="text-center py-6 space-y-4">

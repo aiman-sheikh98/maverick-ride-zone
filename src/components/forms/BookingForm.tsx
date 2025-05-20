@@ -13,6 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
+import { CreditCard } from 'lucide-react';
 
 // Import our components
 import { VehicleSelector } from '@/components/booking/VehicleSelector';
@@ -121,13 +122,13 @@ export const BookingForm = () => {
 
   return (
     <>
-      <Card className="w-full max-w-md shadow-lg">
-        <CardHeader>
-          <CardTitle>Book a Cab</CardTitle>
+      <Card className="w-full max-w-md shadow-lg hover:shadow-xl transition-all duration-300">
+        <CardHeader className="bg-gradient-to-r from-primary/10 to-transparent border-b">
+          <CardTitle className="text-2xl">Book a Cab</CardTitle>
           <CardDescription>Enter your trip details to request a cab</CardDescription>
         </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
+        <CardContent className="p-6">
+          <form onSubmit={handleSubmit} className="space-y-5">
             <LocationInputs 
               pickupLocation={formData.pickupLocation}
               dropLocation={formData.dropLocation}
@@ -142,8 +143,8 @@ export const BookingForm = () => {
             />
 
             <div className="space-y-2">
-              <label>Select Vehicle Type</label>
-              <div className="relative mt-2">
+              <label className="text-sm font-medium">Select Vehicle Type</label>
+              <div className="relative mt-1">
                 <VehicleSelector 
                   selectedVehicleType={formData.vehicleType}
                   onVehicleSelect={handleVehicleSelect}
@@ -156,8 +157,13 @@ export const BookingForm = () => {
               onPassengersChange={handlePassengersChange}
             />
 
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Processing..." : "Request Cab"}
+            <Button 
+              type="submit" 
+              className="w-full h-12 text-base font-medium mt-4 bg-primary hover:bg-primary/90 transition-all duration-300 transform hover:-translate-y-1"
+              disabled={loading}
+            >
+              <CreditCard className="mr-2 h-5 w-5" />
+              {loading ? "Processing..." : "Book Now & Pay"}
             </Button>
           </form>
         </CardContent>
