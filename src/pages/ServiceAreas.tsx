@@ -2,10 +2,11 @@
 import React, { useState } from 'react';
 import { Layout } from '@/components/layout/Layout';
 import { Card, CardContent } from '@/components/ui/card';
-import { MapPin, ChevronRight } from 'lucide-react';
+import { MapPin, ChevronRight, Globe } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { AspectRatio } from '@/components/ui/aspect-ratio';
+import { HoverCard, HoverCardTrigger, HoverCardContent } from '@/components/ui/hover-card';
 
 // This would be replaced with a real API call in a production app
 const serviceAreas = [
@@ -15,7 +16,7 @@ const serviceAreas = [
     description: 'Covering all major office buildings and corporate headquarters in the central business district.',
     availability: '24/7',
     landmarks: ['Central Plaza', 'Financial Tower', 'Commerce Center', 'City Hall'],
-    image: 'https://images.unsplash.com/photo-1582152472601-3ae99bf72545?auto=format&fit=crop&q=80', // Downtown skyline
+    image: 'https://images.unsplash.com/photo-1486818491405-176d613739ed?auto=format&fit=crop&q=80', // Updated downtown image
     details: 'Our Downtown Business District service covers the bustling center of the city, providing reliable transportation for corporate executives, employees, and visitors. With 24/7 availability, we ensure you never have to wait for a cab, even during late-night meetings or early morning conferences.'
   },
   {
@@ -78,10 +79,10 @@ const ServiceAreas = () => {
 
   return (
     <Layout>
-      <div className="py-16 hero-gradient">
+      <div className="py-16 bg-gradient-to-br from-maverick-300/30 via-maverick-400/20 to-transparent">
         <div className="container px-4 mx-auto md:px-8">
           <div className="text-center mb-12">
-            <h1 className="text-3xl md:text-4xl font-bold mb-4">Service Areas</h1>
+            <h1 className="text-3xl md:text-4xl font-bold mb-4 animate-fade-in">Service Areas</h1>
             <p className="text-muted-foreground max-w-2xl mx-auto">
               Maverick provides corporate cab services in the following areas. Click on an area to learn more about its coverage and landmarks.
             </p>
@@ -91,7 +92,7 @@ const ServiceAreas = () => {
             {serviceAreas.map((area) => (
               <Card 
                 key={area.id} 
-                className="overflow-hidden hover:shadow-md transition-shadow cursor-pointer"
+                className="overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 cursor-pointer group rounded-xl border-maverick-300/30"
                 onClick={() => openAreaDetails(area)}
               >
                 <div className="w-full">
@@ -99,29 +100,46 @@ const ServiceAreas = () => {
                     <img 
                       src={area.image} 
                       alt={area.name}
-                      className="object-cover w-full h-full"
+                      className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-500"
                     />
                   </AspectRatio>
                 </div>
                 <CardContent className="p-6">
                   <div className="flex items-start gap-3 mb-4">
-                    <div className="p-2 bg-maverick-100 rounded-full">
+                    <div className="p-2 bg-maverick-100 rounded-full group-hover:bg-maverick-200 transition-colors">
                       <MapPin className="h-5 w-5 text-maverick-600" />
                     </div>
                     <div>
-                      <h2 className="text-xl font-semibold">{area.name}</h2>
+                      <h2 className="text-xl font-semibold group-hover:text-maverick-600 transition-colors">{area.name}</h2>
                       <p className="text-xs text-muted-foreground">Availability: {area.availability}</p>
                     </div>
                   </div>
                   
                   <p className="text-muted-foreground mb-4">{area.description}</p>
                   
-                  <Button variant="ghost" className="flex items-center gap-1 mt-2 hover:text-maverick-600 p-0" asChild>
-                    <div>
-                      View Details
-                      <ChevronRight className="h-4 w-4" />
-                    </div>
-                  </Button>
+                  <HoverCard>
+                    <HoverCardTrigger asChild>
+                      <Button variant="ghost" className="flex items-center gap-1 mt-2 group-hover:text-maverick-600 p-0" asChild>
+                        <div>
+                          View Details
+                          <ChevronRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                        </div>
+                      </Button>
+                    </HoverCardTrigger>
+                    <HoverCardContent className="w-80 p-4">
+                      <div className="space-y-2">
+                        <h4 className="text-sm font-semibold">{area.name} Landmarks</h4>
+                        <ul className="text-xs space-y-1">
+                          {area.landmarks.map((landmark, idx) => (
+                            <li key={idx} className="flex items-center gap-2">
+                              <span className="w-1.5 h-1.5 bg-maverick-400 rounded-full"></span>
+                              {landmark}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    </HoverCardContent>
+                  </HoverCard>
                 </CardContent>
               </Card>
             ))}
@@ -131,9 +149,12 @@ const ServiceAreas = () => {
 
       <Dialog open={!!selectedArea} onOpenChange={() => closeAreaDetails()}>
         {selectedArea && (
-          <DialogContent className="max-w-3xl">
+          <DialogContent className="max-w-3xl animate-scale-in">
             <DialogHeader>
-              <DialogTitle className="text-2xl">{selectedArea.name}</DialogTitle>
+              <DialogTitle className="text-2xl flex items-center gap-2">
+                <Globe className="h-5 w-5 text-maverick-500" />
+                {selectedArea.name}
+              </DialogTitle>
               <DialogDescription>
                 Availability: {selectedArea.availability}
               </DialogDescription>
@@ -154,8 +175,8 @@ const ServiceAreas = () => {
                 <h3 className="font-semibold mb-2">Key Locations:</h3>
                 <ul className="grid grid-cols-1 md:grid-cols-2 gap-2">
                   {selectedArea.landmarks.map((landmark, index) => (
-                    <li key={index} className="flex items-center">
-                      <span className="w-1.5 h-1.5 bg-maverick-400 rounded-full mr-2"></span>
+                    <li key={index} className="flex items-center p-2 hover:bg-accent/40 rounded-md transition-colors">
+                      <span className="w-2 h-2 bg-maverick-400 rounded-full mr-2"></span>
                       {landmark}
                     </li>
                   ))}

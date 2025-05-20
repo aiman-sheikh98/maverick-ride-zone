@@ -10,6 +10,12 @@ const corsHeaders = {
   'Content-Type': 'application/json',
 };
 
+// Helper function for logging
+const logStep = (step: string, details?: any) => {
+  const detailsStr = details ? ` - ${JSON.stringify(details)}` : '';
+  console.log(`[CREATE-PAYMENT-INTENT] ${step}${detailsStr}`);
+};
+
 // Handle CORS preflight requests
 const handleCorsRequest = () => {
   return new Response(null, {
@@ -21,11 +27,15 @@ const handleCorsRequest = () => {
 // Handle actual requests
 const handleRequest = async (req: Request) => {
   try {
-    console.log('Payment intent request received');
+    logStep('Payment intent request received');
     
     // Parse the request body
     const { rideDetails } = await req.json();
-    console.log('Ride details received:', JSON.stringify(rideDetails));
+    logStep('Ride details received', rideDetails);
+    
+    if (!rideDetails || !rideDetails.rideId) {
+      throw new Error('Invalid ride details provided');
+    }
     
     // Create a Supabase client to authenticate the user
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -38,23 +48,23 @@ const handleRequest = async (req: Request) => {
       throw new Error('No authorization header provided');
     }
     
-    console.log('Authentication header found');
+    logStep('Authentication header found');
     
     // Get the current user from the token
     const token = authHeader.replace('Bearer ', '');
     const { data: { user }, error: userError } = await supabaseClient.auth.getUser(token);
     
     if (userError || !user) {
-      console.error('Authentication error:', userError);
+      logStep('Authentication error', userError);
       throw new Error('User not authenticated');
     }
     
-    console.log('User authenticated:', user.id);
+    logStep('User authenticated', { id: user.id });
 
     // Calculate price based on ride details
     let amount = 0;
 
-    switch (rideDetails.vehicleType.toLowerCase()) {
+    switch (rideDetails.vehicleType?.toLowerCase()) {
       case 'sedan':
         amount = 2000; // $20.00
         break;
@@ -71,7 +81,7 @@ const handleRequest = async (req: Request) => {
         amount = 2000; // Default $20.00
     }
     
-    console.log('Calculated amount:', amount);
+    logStep('Calculated amount', { amount });
 
     // Initialize Stripe with the secret key
     const stripeSecretKey = Deno.env.get('STRIPE_SECRET_KEY');
@@ -79,41 +89,46 @@ const handleRequest = async (req: Request) => {
       throw new Error('Stripe secret key not configured');
     }
     
-    console.log('Stripe key verified');
+    logStep('Stripe key verified');
     
     const stripe = new Stripe(stripeSecretKey, {
       apiVersion: '2023-10-16',
     });
 
     // Create a payment intent
-    console.log('Creating payment intent');
-    const paymentIntent = await stripe.paymentIntents.create({
-      amount,
-      currency: 'usd',
-      automatic_payment_methods: {
-        enabled: true,
-      },
-      metadata: {
-        user_id: user.id,
-        ride_id: rideDetails.rideId,
-        pickup_location: rideDetails.pickupLocation,
-        drop_location: rideDetails.dropLocation,
-        vehicle_type: rideDetails.vehicleType
-      },
-    });
-    
-    console.log('Payment intent created:', paymentIntent.id);
+    logStep('Creating payment intent');
+    try {
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount,
+        currency: 'usd',
+        automatic_payment_methods: {
+          enabled: true,
+        },
+        metadata: {
+          user_id: user.id,
+          ride_id: rideDetails.rideId,
+          pickup_location: rideDetails.pickupLocation,
+          drop_location: rideDetails.dropLocation,
+          vehicle_type: rideDetails.vehicleType
+        },
+      });
+      
+      logStep('Payment intent created', { id: paymentIntent.id });
 
-    // Return the client secret to the client
-    return new Response(JSON.stringify({ 
-      clientSecret: paymentIntent.client_secret,
-      amount
-    }), {
-      headers: corsHeaders,
-      status: 200,
-    });
+      // Return the client secret to the client
+      return new Response(JSON.stringify({ 
+        clientSecret: paymentIntent.client_secret,
+        amount
+      }), {
+        headers: corsHeaders,
+        status: 200,
+      });
+    } catch (stripeError) {
+      logStep('Stripe payment intent creation failed', stripeError);
+      throw new Error(`Stripe error: ${stripeError.message || 'Unknown Stripe error'}`);
+    }
   } catch (error) {
-    console.error('Error creating payment intent:', error);
+    logStep('Error creating payment intent', { message: error.message });
     
     return new Response(JSON.stringify({ 
       error: error.message || 'Internal server error' 
@@ -126,7 +141,7 @@ const handleRequest = async (req: Request) => {
 
 // Server function to handle all requests
 serve(async (req) => {
-  console.log('Request received:', req.method);
+  logStep('Request received', { method: req.method });
   
   // Handle CORS preflight requests (OPTIONS)
   if (req.method === 'OPTIONS') {

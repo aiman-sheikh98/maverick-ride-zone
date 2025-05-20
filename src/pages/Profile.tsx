@@ -5,7 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2 } from 'lucide-react';
+import { Loader2, User, Clock, Settings } from 'lucide-react';
 import { ProfileContent } from '@/components/profile/ProfileContent';
 import { AccountSettings } from '@/components/profile/AccountSettings';
 import { RidesHistory } from '@/components/profile/RidesHistory';
@@ -23,6 +23,7 @@ const Profile = () => {
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
+  const [activeTab, setActiveTab] = useState('profile');
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -44,8 +45,7 @@ const Profile = () => {
           // Profile exists
           setProfile(data);
         } else {
-          // Profile doesn't exist, create one - we need to use service role key
-          // For security, we'll do this insert directly, no RLS needed for insert
+          // Profile doesn't exist, create one
           const { data: newProfile, error: insertError } = await supabase
             .from('profiles')
             .insert({
@@ -132,16 +132,18 @@ const Profile = () => {
     }
   };
 
-  // Handle tab change
   const handleTabChange = (value: string) => {
-    // Any tab change logic can go here if needed in the future
+    setActiveTab(value);
   };
 
   if (loading) {
     return (
       <Layout>
         <div className="min-h-[80vh] py-16 flex items-center justify-center">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <div className="flex flex-col items-center space-y-4 animate-pulse">
+            <Loader2 className="h-12 w-12 animate-spin text-maverick-500" />
+            <p className="text-muted-foreground">Loading your profile...</p>
+          </div>
         </div>
       </Layout>
     );
@@ -149,35 +151,63 @@ const Profile = () => {
 
   return (
     <Layout>
-      <div className="min-h-[80vh] py-16">
+      <div className="min-h-[80vh] py-16 bg-gradient-to-br from-maverick-50/60 via-transparent to-transparent">
         <div className="container px-4 mx-auto md:px-8">
-          <h1 className="text-3xl font-bold mb-8">My Profile</h1>
+          <h1 className="text-3xl font-bold mb-2 flex items-center gap-2">
+            <div className="p-2 rounded-full bg-maverick-100">
+              <User className="h-6 w-6 text-maverick-600" />
+            </div>
+            <span>My Profile</span>
+          </h1>
+          <p className="text-muted-foreground mb-8">Manage your personal information and account settings</p>
           
-          <Tabs defaultValue="profile" className="w-full" onValueChange={handleTabChange}>
-            <TabsList className="grid w-full md:w-[600px] grid-cols-3 mb-8">
-              <TabsTrigger value="profile">Profile</TabsTrigger>
-              <TabsTrigger value="account">Account</TabsTrigger>
-              <TabsTrigger value="rides">My Rides</TabsTrigger>
-            </TabsList>
+          <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
+            <div className="bg-white shadow-md rounded-xl mb-8 p-1">
+              <TabsList className="grid w-full md:w-auto grid-cols-3 h-auto p-1 gap-2">
+                <TabsTrigger 
+                  value="profile" 
+                  className="flex items-center gap-2 py-3 data-[state=active]:bg-maverick-100 data-[state=active]:text-maverick-700"
+                >
+                  <User className="h-4 w-4" />
+                  Profile
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="rides"
+                  className="flex items-center gap-2 py-3 data-[state=active]:bg-maverick-100 data-[state=active]:text-maverick-700"
+                >
+                  <Clock className="h-4 w-4" />
+                  My Rides
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="account"
+                  className="flex items-center gap-2 py-3 data-[state=active]:bg-maverick-100 data-[state=active]:text-maverick-700"
+                >
+                  <Settings className="h-4 w-4" />
+                  Account
+                </TabsTrigger>
+              </TabsList>
+            </div>
             
-            <TabsContent value="profile">
-              {profile && (
-                <ProfileContent 
-                  profile={profile}
-                  user={user}
-                  onUpdateProfile={updateProfile}
-                  isUpdating={updating}
-                />
-              )}
-            </TabsContent>
-            
-            <TabsContent value="account">
-              <AccountSettings createdAt={user?.created_at} />
-            </TabsContent>
+            <div className="bg-white shadow-md rounded-xl p-6 animate-fade-in">
+              <TabsContent value="profile">
+                {profile && (
+                  <ProfileContent 
+                    profile={profile}
+                    user={user}
+                    onUpdateProfile={updateProfile}
+                    isUpdating={updating}
+                  />
+                )}
+              </TabsContent>
+              
+              <TabsContent value="account">
+                <AccountSettings createdAt={user?.created_at} />
+              </TabsContent>
 
-            <TabsContent value="rides">
-              {user && <RidesHistory userId={user.id} />}
-            </TabsContent>
+              <TabsContent value="rides">
+                {user && <RidesHistory userId={user.id} />}
+              </TabsContent>
+            </div>
           </Tabs>
         </div>
       </div>

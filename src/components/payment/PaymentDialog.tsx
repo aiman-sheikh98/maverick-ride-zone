@@ -22,6 +22,7 @@ export const PaymentDialog = ({ open, onClose, rideDetails }: PaymentDialogProps
   const [clientSecret, setClientSecret] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [amount, setAmount] = useState(0);
+  const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -30,6 +31,8 @@ export const PaymentDialog = ({ open, onClose, rideDetails }: PaymentDialogProps
       if (!open || !rideDetails) return;
 
       setIsLoading(true);
+      setError(null);
+      
       try {
         console.log('Fetching payment intent for ride:', rideDetails);
         const { data, error } = await supabase.functions.invoke('create-payment-intent', {
@@ -38,25 +41,37 @@ export const PaymentDialog = ({ open, onClose, rideDetails }: PaymentDialogProps
 
         if (error) {
           console.error('Error response from payment intent function:', error);
-          throw error;
+          setError('Unable to set up payment. Please try again.');
+          toast({
+            title: 'Payment Setup Failed',
+            description: error.message || 'Unable to set up payment process. Please try again.',
+            variant: 'destructive',
+          });
+          return;
         }
 
         if (!data || !data.clientSecret) {
           console.error('Invalid response data:', data);
-          throw new Error('Invalid payment intent data received');
+          setError('Invalid payment data received. Please try again.');
+          toast({
+            title: 'Payment Setup Failed',
+            description: 'Invalid payment data received. Please try again.',
+            variant: 'destructive',
+          });
+          return;
         }
 
         console.log('Payment intent created successfully');
         setClientSecret(data.clientSecret);
         setAmount(data.amount);
-      } catch (error) {
-        console.error('Error fetching payment intent:', error);
+      } catch (err) {
+        console.error('Error fetching payment intent:', err);
+        setError('An unexpected error occurred. Please try again.');
         toast({
           title: 'Payment Setup Failed',
-          description: 'Unable to set up payment process. Please try again.',
+          description: 'An unexpected error occurred. Please try again.',
           variant: 'destructive',
         });
-        onClose();
       } finally {
         setIsLoading(false);
       }
@@ -70,6 +85,7 @@ export const PaymentDialog = ({ open, onClose, rideDetails }: PaymentDialogProps
     
     try {
       console.log('Updating ride status to completed');
+      setIsLoading(true);
       // Update the ride status to completed and set the amount
       const { error } = await supabase
         .from('rides')
@@ -103,6 +119,8 @@ export const PaymentDialog = ({ open, onClose, rideDetails }: PaymentDialogProps
         description: 'An unexpected error occurred after payment.',
         variant: 'destructive',
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -123,6 +141,16 @@ export const PaymentDialog = ({ open, onClose, rideDetails }: PaymentDialogProps
         {isLoading ? (
           <div className="flex justify-center py-8">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          </div>
+        ) : error ? (
+          <div className="text-center py-6 space-y-4">
+            <p className="text-destructive">{error}</p>
+            <button 
+              onClick={onClose}
+              className="px-4 py-2 bg-secondary text-secondary-foreground rounded-md hover:bg-secondary/80 transition-colors"
+            >
+              Close
+            </button>
           </div>
         ) : (
           <StripePaymentForm 
