@@ -118,19 +118,20 @@ const handleRequest = async (req: Request) => {
       // Get current date for payment_date
       const currentDate = new Date().toISOString();
 
-      // Update ride record with payment intent ID and set status to paid
+      // Update ride record with payment intent ID and set status to pending_payment
       const { error: updateError } = await supabaseClient
         .from('rides')
         .update({ 
           payment_intent_id: paymentIntent.id, 
           status: 'pending_payment',
-          amount: amount / 100 // Convert cents to dollars
+          amount: amount / 100, // Convert cents to dollars
+          payment_date: currentDate
         })
         .eq('id', rideDetails.rideId);
         
       if (updateError) {
         logStep('Failed to update ride with payment intent', updateError);
-        // Non-critical error, continue
+        // Continue despite error - will be non-critical
       } else {
         logStep('Ride updated with payment intent');
       }

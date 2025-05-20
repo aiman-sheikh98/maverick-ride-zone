@@ -10,6 +10,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2, CreditCard, CheckCircle, XCircle } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 // Initialize Stripe with the publishable key
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
@@ -28,6 +29,7 @@ const PaymentForm = ({ onSuccess, onCancel, amount }: Omit<StripePaymentFormProp
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | undefined>();
   const [paymentStatus, setPaymentStatus] = useState<'idle' | 'processing' | 'succeeded' | 'error'>('idle');
+  const { toast } = useToast();
   
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -56,9 +58,18 @@ const PaymentForm = ({ onSuccess, onCancel, amount }: Omit<StripePaymentFormProp
         console.error('Payment confirmation error:', error);
         setErrorMessage(error.message || 'An error occurred during payment processing.');
         setPaymentStatus('error');
+        toast({
+          title: "Payment Failed",
+          description: error.message || 'An error occurred during payment processing.',
+          variant: "destructive",
+        });
       } else if (paymentIntent && paymentIntent.status === 'succeeded') {
         console.log('Payment successful:', paymentIntent);
         setPaymentStatus('succeeded');
+        toast({
+          title: "Payment Successful",
+          description: "Your ride has been confirmed and paid.",
+        });
         setTimeout(() => {
           onSuccess();
         }, 1500); // Give user time to see success message
@@ -66,6 +77,10 @@ const PaymentForm = ({ onSuccess, onCancel, amount }: Omit<StripePaymentFormProp
         console.log('Payment status:', paymentIntent.status);
         // For test mode, we'll treat 'processing' as success too
         setPaymentStatus('succeeded');
+        toast({
+          title: "Payment Processed",
+          description: "Your payment is being processed.",
+        });
         setTimeout(() => {
           onSuccess();
         }, 1500);
@@ -73,11 +88,21 @@ const PaymentForm = ({ onSuccess, onCancel, amount }: Omit<StripePaymentFormProp
         console.error('Unexpected response from Stripe');
         setErrorMessage('An unexpected response was received from payment processor.');
         setPaymentStatus('error');
+        toast({
+          title: "Payment Issue",
+          description: "An unexpected response was received from the payment processor.",
+          variant: "destructive",
+        });
       }
     } catch (error: any) {
       console.error('Payment error:', error);
       setErrorMessage('An unexpected error occurred. Please try again.');
       setPaymentStatus('error');
+      toast({
+        title: "Payment Error",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setIsLoading(false);
     }
@@ -93,12 +118,14 @@ const PaymentForm = ({ onSuccess, onCancel, amount }: Omit<StripePaymentFormProp
   if (paymentStatus === 'succeeded') {
     return (
       <div className="flex flex-col items-center py-8 space-y-4 animate-fade-in">
-        <CheckCircle className="h-16 w-16 text-green-500" />
+        <div className="h-16 w-16 rounded-full bg-green-100 flex items-center justify-center">
+          <CheckCircle className="h-10 w-10 text-green-500" />
+        </div>
         <p className="text-lg font-medium">Payment Successful!</p>
         <p className="text-center text-muted-foreground">
           Your ride has been confirmed and payment of {formatAmount(amount)} has been processed.
         </p>
-        <p>Redirecting to your dashboard...</p>
+        <p className="text-sm text-muted-foreground animate-pulse">Redirecting to your dashboard...</p>
       </div>
     );
   }
@@ -106,14 +133,16 @@ const PaymentForm = ({ onSuccess, onCancel, amount }: Omit<StripePaymentFormProp
   if (paymentStatus === 'error') {
     return (
       <div className="flex flex-col items-center py-6 space-y-4 animate-fade-in">
-        <XCircle className="h-16 w-16 text-red-500" />
+        <div className="h-16 w-16 rounded-full bg-red-100 flex items-center justify-center">
+          <XCircle className="h-10 w-10 text-red-500" />
+        </div>
         <p className="text-lg font-medium">Payment Failed</p>
         <p className="text-sm text-muted-foreground text-center">{errorMessage}</p>
         <div className="flex space-x-4">
-          <Button variant="outline" onClick={onCancel}>
+          <Button variant="outline" onClick={onCancel} className="transition-all hover:scale-105">
             Cancel
           </Button>
-          <Button onClick={() => setPaymentStatus('idle')}>
+          <Button onClick={() => setPaymentStatus('idle')} className="transition-all hover:scale-105">
             Try Again
           </Button>
         </div>
@@ -123,7 +152,7 @@ const PaymentForm = ({ onSuccess, onCancel, amount }: Omit<StripePaymentFormProp
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      <div className="p-5 bg-accent/20 rounded-lg border">
+      <div className="p-5 bg-accent/20 rounded-lg border shadow-sm hover:shadow transition-all">
         <PaymentElement options={{
           layout: {
             type: 'tabs',
@@ -132,10 +161,13 @@ const PaymentForm = ({ onSuccess, onCancel, amount }: Omit<StripePaymentFormProp
         }} />
       </div>
       
-      <div className="bg-muted/30 p-4 rounded-md">
+      <div className="bg-muted/30 p-4 rounded-md shadow-inner">
         <div className="flex justify-between items-center mb-2">
           <span className="text-sm font-medium">Amount</span>
           <span className="text-base font-bold">{formatAmount(amount)}</span>
+        </div>
+        <div className="text-xs text-muted-foreground">
+          This is a test payment. No actual charges will be made.
         </div>
       </div>
       
@@ -146,13 +178,19 @@ const PaymentForm = ({ onSuccess, onCancel, amount }: Omit<StripePaymentFormProp
       )}
       
       <div className="flex justify-between">
-        <Button type="button" variant="outline" onClick={onCancel} disabled={isLoading}>
+        <Button 
+          type="button" 
+          variant="outline" 
+          onClick={onCancel} 
+          disabled={isLoading}
+          className="transition-all hover:scale-105"
+        >
           Cancel
         </Button>
         <Button 
           type="submit" 
           disabled={!stripe || isLoading}
-          className="transition-all duration-300 hover:shadow-md flex items-center gap-2"
+          className="transition-all duration-300 hover:shadow-md hover:scale-105 flex items-center gap-2"
         >
           {isLoading ? (
             <>
@@ -197,7 +235,7 @@ export const StripePaymentForm = ({ clientSecret, onSuccess, onCancel, amount }:
   }
 
   return (
-    <Card className="border-primary/10 shadow-lg">
+    <Card className="border-primary/10 shadow-lg hover:shadow-xl transition-all duration-300">
       <CardHeader className="bg-gradient-to-r from-primary/5 to-transparent">
         <CardTitle className="flex items-center">
           <CreditCard className="h-5 w-5 mr-2 text-primary" />
@@ -211,7 +249,7 @@ export const StripePaymentForm = ({ clientSecret, onSuccess, onCancel, amount }:
       </CardContent>
       <CardFooter className="text-xs text-muted-foreground flex items-center justify-center bg-accent/10 rounded-b-lg">
         <CreditCard className="h-3 w-3 mr-1" />
-        Your payment is processed securely by Stripe.
+        This is a test payment processed securely by Stripe.
       </CardFooter>
     </Card>
   );

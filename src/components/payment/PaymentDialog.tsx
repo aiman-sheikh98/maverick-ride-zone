@@ -3,9 +3,10 @@ import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { StripePaymentForm } from './StripePaymentForm';
-import { Loader2, CreditCard } from 'lucide-react';
+import { Loader2, CreditCard, AlertCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
 
 interface PaymentDialogProps {
   open: boolean;
@@ -135,12 +136,72 @@ export const PaymentDialog = ({ open, onClose, rideDetails }: PaymentDialogProps
   };
 
   const handleCancel = () => {
+    toast({
+      title: 'Payment Cancelled',
+      description: 'You have cancelled the payment process.',
+    });
     onClose();
+  };
+  
+  const handleRetry = () => {
+    setRetryCount(0);
+    setError(null);
+    getPaymentIntent();
+  };
+
+  const getPaymentIntent = async () => {
+    if (!rideDetails) return;
+
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      console.log('Fetching payment intent for ride:', rideDetails);
+      const { data, error } = await supabase.functions.invoke('create-payment-intent', {
+        body: { rideDetails },
+      });
+
+      if (error) {
+        console.error('Error response from payment intent function:', error);
+        setError('Unable to set up payment. Please try again.');
+        toast({
+          title: 'Payment Setup Failed',
+          description: error.message || 'Unable to set up payment process. Please try again.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      if (!data || !data.clientSecret) {
+        console.error('Invalid response data:', data);
+        setError('Invalid payment data received. Please try again.');
+        toast({
+          title: 'Payment Setup Failed',
+          description: 'Invalid payment data received. Please try again.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      console.log('Payment intent created successfully');
+      setClientSecret(data.clientSecret);
+      setAmount(data.amount);
+    } catch (err) {
+      console.error('Error fetching payment intent:', err);
+      setError('An unexpected error occurred. Please try again.');
+      toast({
+        title: 'Payment Setup Failed',
+        description: 'An unexpected error occurred. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
     <Dialog open={open} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md dark:bg-slate-900 border-primary/10">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <CreditCard className="h-5 w-5 text-primary" />
@@ -158,13 +219,28 @@ export const PaymentDialog = ({ open, onClose, rideDetails }: PaymentDialogProps
           </div>
         ) : error ? (
           <div className="text-center py-6 space-y-4">
-            <p className="text-destructive">{error}</p>
-            <button 
-              onClick={onClose}
-              className="px-4 py-2 bg-secondary text-secondary-foreground rounded-md hover:bg-secondary/80 transition-colors"
-            >
-              Close
-            </button>
+            <div className="flex flex-col items-center gap-4">
+              <div className="h-16 w-16 rounded-full bg-red-100 flex items-center justify-center">
+                <AlertCircle className="h-10 w-10 text-red-500" />
+              </div>
+              <h3 className="text-lg font-semibold">Payment Failed</h3>
+              <p className="text-destructive text-center">{error}</p>
+            </div>
+            <div className="flex justify-center gap-3 mt-6">
+              <Button 
+                variant="outline" 
+                onClick={handleCancel}
+                className="transition-all hover:scale-105"
+              >
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleRetry}
+                className="bg-primary hover:bg-primary/90 transition-all hover:scale-105"
+              >
+                Try Again
+              </Button>
+            </div>
           </div>
         ) : (
           <StripePaymentForm 

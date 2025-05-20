@@ -1,13 +1,16 @@
 
 import React, { useState, useEffect } from 'react';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, CreditCard, Clock, History } from 'lucide-react';
+import { Loader2, CreditCard, Clock, History, Filter, Calendar, Check, X, AlertTriangle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 type Ride = {
   id: string;
@@ -34,7 +37,13 @@ interface RidesHistoryProps {
 
 export const RidesHistory = ({ userId }: RidesHistoryProps) => {
   const [rides, setRides] = useState<Ride[]>([]);
+  const [filteredRides, setFilteredRides] = useState<Ride[]>([]);
   const [loading, setLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState("all");
+  const [cancelRideId, setCancelRideId] = useState<string | null>(null);
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [rideDetails, setRideDetails] = useState<Ride | null>(null);
+  const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const { toast } = useToast();
   
   useEffect(() => {
@@ -62,6 +71,15 @@ export const RidesHistory = ({ userId }: RidesHistoryProps) => {
     };
   }, [userId]);
   
+  useEffect(() => {
+    // Filter rides based on active tab
+    if (activeTab === "all") {
+      setFilteredRides(rides);
+    } else {
+      setFilteredRides(rides.filter(ride => ride.status === activeTab));
+    }
+  }, [rides, activeTab]);
+
   const fetchRides = async () => {
     if (!userId) return;
     
@@ -91,6 +109,53 @@ export const RidesHistory = ({ userId }: RidesHistoryProps) => {
     }
   };
 
+  const handleCancelRide = async () => {
+    if (!cancelRideId) return;
+    
+    try {
+      const { error } = await supabase
+        .from('rides')
+        .update({ status: 'cancelled' })
+        .eq('id', cancelRideId);
+      
+      if (error) {
+        throw error;
+      }
+      
+      toast({
+        title: "Ride Cancelled",
+        description: "Your ride has been cancelled successfully.",
+      });
+      
+      // Update local state
+      setRides(prevRides => 
+        prevRides.map(ride => 
+          ride.id === cancelRideId ? { ...ride, status: 'cancelled' } : ride
+        )
+      );
+    } catch (error) {
+      console.error('Error cancelling ride:', error);
+      toast({
+        title: "Error",
+        description: "Failed to cancel ride. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setCancelDialogOpen(false);
+      setCancelRideId(null);
+    }
+  };
+
+  const openCancelDialog = (rideId: string) => {
+    setCancelRideId(rideId);
+    setCancelDialogOpen(true);
+  };
+
+  const showRideDetails = (ride: Ride) => {
+    setRideDetails(ride);
+    setDetailsDialogOpen(true);
+  };
+
   const formatRideStatus = (status: string) => {
     switch (status) {
       case 'paid':
@@ -116,6 +181,8 @@ export const RidesHistory = ({ userId }: RidesHistoryProps) => {
         return 'destructive';
       case 'pending_payment':
         return 'outline';
+      case 'upcoming':
+        return 'secondary';
       default:
         return 'outline';
     }
@@ -126,118 +193,330 @@ export const RidesHistory = ({ userId }: RidesHistoryProps) => {
       case 'paid':
         return <CreditCard className="h-4 w-4 mr-1" />;
       case 'completed':
-        return <History className="h-4 w-4 mr-1" />;
+        return <Check className="h-4 w-4 mr-1" />;
+      case 'cancelled':
+        return <X className="h-4 w-4 mr-1" />;
       case 'pending_payment':
         return <Clock className="h-4 w-4 mr-1" />;
+      case 'upcoming':
+        return <Calendar className="h-4 w-4 mr-1" />;
       default:
         return null;
     }
   };
 
+  // Calculate statistics
+  const totalRides = rides.length;
+  const totalSpent = rides
+    .filter(ride => ride.status === 'paid' || ride.status === 'completed')
+    .reduce((sum, ride) => sum + (ride.amount || 0), 0);
+  const cancelledRides = rides.filter(ride => ride.status === 'cancelled').length;
+  
   return (
-    <Card className="border-primary/10 shadow-lg hover:shadow-xl transition-all duration-300">
-      <CardHeader className="bg-gradient-to-r from-primary/5 to-transparent">
-        <div className="flex items-center justify-between">
-          <div>
-            <CardTitle className="flex items-center gap-2">
-              <History className="h-5 w-5 text-primary" />
-              My Ride History
-            </CardTitle>
-            <CardDescription>View all your booked rides</CardDescription>
-          </div>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={fetchRides}
-            className="hidden sm:flex"
-          >
-            <Clock className="h-4 w-4 mr-2" /> Refresh
-          </Button>
-        </div>
-      </CardHeader>
-      <CardContent>
-        {loading ? (
-          <div className="flex justify-center py-8">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          </div>
-        ) : rides.length > 0 ? (
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-muted/50 hover:bg-muted">
-                  <TableHead>Date & Time</TableHead>
-                  <TableHead>From / To</TableHead>
-                  <TableHead>Vehicle</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Amount</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {rides.map((ride) => (
-                  <TableRow key={ride.id} className="hover:bg-muted/30 transition-colors group">
-                    <TableCell>
-                      <div className="font-medium">{format(new Date(ride.date), 'MMM dd, yyyy')}</div>
-                      <div className="text-sm text-muted-foreground">{ride.time}</div>
-                      {ride.payment_date && (
-                        <div className="text-xs text-muted-foreground mt-1">
-                          Paid on {format(new Date(ride.payment_date), 'MMM dd, yyyy')}
-                        </div>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <div className="font-medium truncate max-w-[200px] group-hover:text-primary transition-colors">{ride.pickup_location}</div>
-                      <div className="text-sm text-muted-foreground truncate max-w-[200px]">to {ride.drop_location}</div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <img 
-                          src={`/vehicles/${ride.vehicle_type.toLowerCase()}.jpg`} 
-                          alt={ride.vehicle_type} 
-                          className="h-8 w-8 rounded-full object-cover border border-muted-foreground/20" 
-                        />
-                        <span className="capitalize">{ride.vehicle_type}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge 
-                        variant={getBadgeVariant(ride.status)} 
-                        className="flex items-center gap-1 transition-all hover:shadow-sm"
-                      >
-                        {getStatusIcon(ride.status)}
-                        {formatRideStatus(ride.status)}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {ride.amount ? (
-                        <div className="font-medium">
-                          ${ride.amount.toFixed(2)}
-                        </div>
-                      ) : (
-                        '-'
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        ) : (
-          <div className="text-center py-12 bg-muted/20 rounded-lg">
-            <div className="inline-flex justify-center items-center p-4 bg-primary/10 rounded-full mb-4">
-              <History className="h-6 w-6 text-primary" />
+    <>
+      <Card className="border-primary/10 shadow-lg hover:shadow-xl transition-all duration-300">
+        <CardHeader className="bg-gradient-to-r from-primary/5 to-transparent">
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <History className="h-5 w-5 text-primary" />
+                My Ride History
+              </CardTitle>
+              <CardDescription>View all your booked rides</CardDescription>
             </div>
-            <p className="text-lg font-medium text-muted-foreground">No ride history yet</p>
-            <p className="text-sm text-muted-foreground mt-1 mb-4">Book a cab to start your journey</p>
             <Button 
-              className="mt-2 transition-all hover:translate-y-[-2px]" 
-              onClick={() => window.location.href = '/book-cab'}
+              variant="outline" 
+              size="sm" 
+              onClick={fetchRides}
+              className="hidden sm:flex transition-transform hover:scale-105"
             >
-              <CreditCard className="h-4 w-4 mr-2" />
-              Book a Cab
+              <Clock className="h-4 w-4 mr-2" /> Refresh
             </Button>
           </div>
-        )}
-      </CardContent>
-    </Card>
+        </CardHeader>
+        
+        <div className="px-6 pt-2 flex justify-between items-center flex-wrap gap-2">
+          <div className="flex items-center gap-4 flex-wrap">
+            <div className="bg-muted/30 p-2 rounded-md">
+              <span className="text-xs font-medium text-muted-foreground">Total Rides</span>
+              <p className="text-lg font-bold">{totalRides}</p>
+            </div>
+            <div className="bg-muted/30 p-2 rounded-md">
+              <span className="text-xs font-medium text-muted-foreground">Total Spent</span>
+              <p className="text-lg font-bold">${totalSpent.toFixed(2)}</p>
+            </div>
+            <div className="bg-muted/30 p-2 rounded-md">
+              <span className="text-xs font-medium text-muted-foreground">Cancelled</span>
+              <p className="text-lg font-bold">{cancelledRides}</p>
+            </div>
+          </div>
+          
+          <div className="flex items-center">
+            <Filter className="h-4 w-4 mr-2 text-muted-foreground" />
+            <TabsList className="bg-muted/30">
+              <TabsTrigger
+                value="all"
+                onClick={() => setActiveTab("all")}
+                className={activeTab === "all" ? "data-[state=active]:bg-primary data-[state=active]:text-primary-foreground" : ""}
+              >
+                All
+              </TabsTrigger>
+              <TabsTrigger
+                value="paid"
+                onClick={() => setActiveTab("paid")}
+                className={activeTab === "paid" ? "data-[state=active]:bg-primary data-[state=active]:text-primary-foreground" : ""}
+              >
+                Paid
+              </TabsTrigger>
+              <TabsTrigger
+                value="cancelled"
+                onClick={() => setActiveTab("cancelled")}
+                className={activeTab === "cancelled" ? "data-[state=active]:bg-primary data-[state=active]:text-primary-foreground" : ""}
+              >
+                Cancelled
+              </TabsTrigger>
+              <TabsTrigger
+                value="pending_payment"
+                onClick={() => setActiveTab("pending_payment")}
+                className={activeTab === "pending_payment" ? "data-[state=active]:bg-primary data-[state=active]:text-primary-foreground" : ""}
+              >
+                Pending
+              </TabsTrigger>
+            </TabsList>
+          </div>
+        </div>
+        
+        <CardContent className="pt-4">
+          {loading ? (
+            <div className="flex justify-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : filteredRides.length > 0 ? (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/50 hover:bg-muted">
+                    <TableHead>Date & Time</TableHead>
+                    <TableHead>From / To</TableHead>
+                    <TableHead>Vehicle</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Amount</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredRides.map((ride) => (
+                    <TableRow key={ride.id} className="hover:bg-muted/30 transition-colors group">
+                      <TableCell>
+                        <div className="font-medium">{format(new Date(ride.date), 'MMM dd, yyyy')}</div>
+                        <div className="text-sm text-muted-foreground">{ride.time}</div>
+                        {ride.payment_date && (
+                          <div className="text-xs text-muted-foreground mt-1">
+                            Paid on {format(new Date(ride.payment_date), 'MMM dd, yyyy')}
+                          </div>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <div className="font-medium truncate max-w-[150px] lg:max-w-[200px] group-hover:text-primary transition-colors">{ride.pickup_location}</div>
+                        <div className="text-sm text-muted-foreground truncate max-w-[150px] lg:max-w-[200px]">to {ride.drop_location}</div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <img 
+                            src={`/vehicles/${ride.vehicle_type.toLowerCase()}.jpg`} 
+                            alt={ride.vehicle_type} 
+                            className="h-8 w-8 rounded-full object-cover border border-muted-foreground/20" 
+                          />
+                          <span className="capitalize">{ride.vehicle_type}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge 
+                          variant={getBadgeVariant(ride.status)} 
+                          className="flex items-center gap-1 transition-all hover:shadow-sm"
+                        >
+                          {getStatusIcon(ride.status)}
+                          {formatRideStatus(ride.status)}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {ride.amount ? (
+                          <div className="font-medium">
+                            ${ride.amount.toFixed(2)}
+                          </div>
+                        ) : (
+                          '-'
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={() => showRideDetails(ride)}
+                            className="transition-all hover:scale-105 text-xs px-2 py-1 h-auto"
+                          >
+                            Details
+                          </Button>
+                          
+                          {(ride.status === 'upcoming' || ride.status === 'pending_payment') && (
+                            <Button 
+                              variant="destructive" 
+                              size="sm" 
+                              onClick={() => openCancelDialog(ride.id)}
+                              className="transition-all hover:scale-105 text-xs px-2 py-1 h-auto"
+                            >
+                              Cancel
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          ) : (
+            <div className="text-center py-12 bg-muted/20 rounded-lg">
+              <div className="inline-flex justify-center items-center p-4 bg-primary/10 rounded-full mb-4">
+                <History className="h-6 w-6 text-primary" />
+              </div>
+              <p className="text-lg font-medium text-muted-foreground">
+                {activeTab === "all" ? "No ride history yet" : `No ${activeTab} rides found`}
+              </p>
+              <p className="text-sm text-muted-foreground mt-1 mb-4">Book a cab to start your journey</p>
+              <Button 
+                className="mt-2 transition-all hover:translate-y-[-2px]" 
+                onClick={() => window.location.href = '/book-cab'}
+              >
+                <CreditCard className="h-4 w-4 mr-2" />
+                Book a Cab
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+      
+      {/* Cancel ride confirmation dialog */}
+      <AlertDialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cancel Ride</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to cancel this ride? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel 
+              onClick={() => setCancelDialogOpen(false)}
+              className="transition-all hover:scale-105"
+            >
+              No, keep ride
+            </AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleCancelRide}
+              className="bg-destructive hover:bg-destructive/90 transition-all hover:scale-105"
+            >
+              Yes, cancel ride
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      
+      {/* Ride details dialog */}
+      <Dialog open={detailsDialogOpen} onOpenChange={setDetailsDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CreditCard className="h-5 w-5 text-primary" />
+              Ride Details
+            </DialogTitle>
+            <DialogDescription>
+              Complete information about your ride
+            </DialogDescription>
+          </DialogHeader>
+          
+          {rideDetails && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-muted/20 p-3 rounded-md">
+                  <div className="text-xs text-muted-foreground">Date</div>
+                  <div className="font-medium">{format(new Date(rideDetails.date), 'PPP')}</div>
+                </div>
+                <div className="bg-muted/20 p-3 rounded-md">
+                  <div className="text-xs text-muted-foreground">Time</div>
+                  <div className="font-medium">{rideDetails.time}</div>
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <div className="text-xs text-muted-foreground">From</div>
+                <div className="font-medium bg-muted/20 p-3 rounded-md">{rideDetails.pickup_location}</div>
+              </div>
+              
+              <div className="space-y-2">
+                <div className="text-xs text-muted-foreground">To</div>
+                <div className="font-medium bg-muted/20 p-3 rounded-md">{rideDetails.drop_location}</div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-muted/20 p-3 rounded-md">
+                  <div className="text-xs text-muted-foreground">Vehicle Type</div>
+                  <div className="font-medium capitalize">{rideDetails.vehicle_type}</div>
+                </div>
+                <div className="bg-muted/20 p-3 rounded-md">
+                  <div className="text-xs text-muted-foreground">Passengers</div>
+                  <div className="font-medium">{rideDetails.passengers}</div>
+                </div>
+              </div>
+              
+              <div className="bg-muted/20 p-3 rounded-md">
+                <div className="text-xs text-muted-foreground">Status</div>
+                <Badge 
+                  variant={getBadgeVariant(rideDetails.status)} 
+                  className="mt-1"
+                >
+                  {formatRideStatus(rideDetails.status)}
+                </Badge>
+              </div>
+              
+              <div className="bg-muted/20 p-3 rounded-md">
+                <div className="text-xs text-muted-foreground">Amount</div>
+                <div className="font-medium text-lg">{rideDetails.amount ? `$${rideDetails.amount.toFixed(2)}` : 'Not charged'}</div>
+              </div>
+              
+              {rideDetails.payment_date && (
+                <div className="bg-muted/20 p-3 rounded-md">
+                  <div className="text-xs text-muted-foreground">Payment Date</div>
+                  <div className="font-medium">{format(new Date(rideDetails.payment_date), 'PPP')}</div>
+                </div>
+              )}
+            </div>
+          )}
+          
+          <DialogFooter className="flex justify-end space-x-2">
+            <Button 
+              onClick={() => setDetailsDialogOpen(false)}
+              className="transition-all hover:scale-105"
+            >
+              Close
+            </Button>
+            
+            {rideDetails && (rideDetails.status === 'upcoming' || rideDetails.status === 'pending_payment') && (
+              <Button 
+                variant="destructive" 
+                onClick={() => {
+                  setDetailsDialogOpen(false);
+                  openCancelDialog(rideDetails.id);
+                }}
+                className="transition-all hover:scale-105"
+              >
+                Cancel Ride
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 };
