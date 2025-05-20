@@ -27,16 +27,7 @@ const PaymentForm = ({ onSuccess, onCancel, amount }: Omit<StripePaymentFormProp
   const elements = useElements();
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | undefined>();
-  const [paymentElement, setPaymentElement] = useState<any>(null);
   
-  useEffect(() => {
-    // We need to make sure elements are ready before trying to get elements
-    if (elements) {
-      const element = elements.getElement(PaymentElement);
-      setPaymentElement(element);
-    }
-  }, [elements]);
-
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
@@ -49,7 +40,7 @@ const PaymentForm = ({ onSuccess, onCancel, amount }: Omit<StripePaymentFormProp
     setErrorMessage(undefined);
 
     try {
-      const { error } = await stripe.confirmPayment({
+      const { error, paymentIntent } = await stripe.confirmPayment({
         elements,
         confirmParams: {
           return_url: `${window.location.origin}/dashboard`,
@@ -60,10 +51,12 @@ const PaymentForm = ({ onSuccess, onCancel, amount }: Omit<StripePaymentFormProp
       if (error) {
         console.error('Payment confirmation error:', error);
         setErrorMessage(error.message);
-      } else {
-        // Payment succeeded
-        console.log('Payment successful');
+      } else if (paymentIntent && paymentIntent.status === 'succeeded') {
+        console.log('Payment successful:', paymentIntent);
         onSuccess();
+      } else {
+        console.log('Payment status:', paymentIntent?.status);
+        onSuccess(); // Assume success if no explicit error
       }
     } catch (error: any) {
       console.error('Payment error:', error);

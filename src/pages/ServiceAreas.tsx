@@ -15,7 +15,7 @@ const serviceAreas = [
     description: 'Covering all major office buildings and corporate headquarters in the central business district.',
     availability: '24/7',
     landmarks: ['Central Plaza', 'Financial Tower', 'Commerce Center', 'City Hall'],
-    image: '/placeholder.svg', // You can replace this with your own image
+    image: 'https://images.unsplash.com/photo-1582152472601-3ae99bf72545?auto=format&fit=crop&q=80', // Downtown skyline
     details: 'Our Downtown Business District service covers the bustling center of the city, providing reliable transportation for corporate executives, employees, and visitors. With 24/7 availability, we ensure you never have to wait for a cab, even during late-night meetings or early morning conferences.'
   },
   {
@@ -24,7 +24,7 @@ const serviceAreas = [
     description: 'Service to all technology parks and innovation centers in the eastern corridor.',
     availability: '5:00 AM - 11:00 PM',
     landmarks: ['Innovation Hub', 'Tech Campus', 'Digital Valley', 'Startup Center'],
-    image: '/placeholder.svg', // You can replace this with your own image
+    image: 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80', // Modern tech campus
     details: 'The Tech Park Zone service area encompasses the rapidly growing technology sector in the eastern part of the city. Our cabs are available from early morning until late evening, catering to the flexible working hours of tech professionals. We provide seamless transportation between tech campuses, co-working spaces, and innovation hubs.'
   },
   {
@@ -33,7 +33,7 @@ const serviceAreas = [
     description: 'Regular service to and from all major airports, train stations and transport terminals.',
     availability: '24/7',
     landmarks: ['International Airport', 'Central Station', 'Bus Terminal', 'Port Authority'],
-    image: '/placeholder.svg', // You can replace this with your own image
+    image: 'https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?auto=format&fit=crop&q=80', // Airport terminal
     details: 'Never miss a flight or connection with our dedicated Airport & Transport Hubs service. We operate around the clock, ensuring travelers and commuters have reliable transportation to and from all major transportation hubs in the city. Our drivers are familiar with all terminals and can navigate the busiest times with ease.'
   },
   {
@@ -42,7 +42,7 @@ const serviceAreas = [
     description: 'Covering manufacturing plants and industrial complexes in the western sector.',
     availability: '6:00 AM - 10:00 PM',
     landmarks: ['Manufacturing Park', 'Industrial Complex', 'Factory Zone', 'Distribution Center'],
-    image: '/placeholder.svg', // You can replace this with your own image
+    image: 'https://images.unsplash.com/photo-1500673922987-e212871fec22?auto=format&fit=crop&q=80', // Industrial facilities
     details: 'Our Industrial Area service caters to employees and business visitors to the manufacturing and distribution centers in the western part of the city. With operations starting early and running into the evening, we accommodate shift changes and business hours of industrial facilities.'
   },
   {
@@ -51,7 +51,7 @@ const serviceAreas = [
     description: 'Service to satellite offices and corporate campuses in surrounding suburbs.',
     availability: '7:00 AM - 9:00 PM',
     landmarks: ['North Corporate Park', 'Eastside Campus', 'South Business Center', 'West Office Park'],
-    image: '/placeholder.svg', // You can replace this with your own image
+    image: 'https://images.unsplash.com/photo-1465146344425-f00d5f5c8f07?auto=format&fit=crop&q=80', // Suburban office park
     details: 'Our Suburban Office Campuses service connects the peripheral business districts with the city center and residential areas. We provide reliable transportation for employees commuting to suburban corporate offices, with service times aligned to standard business hours.'
   },
   {
@@ -60,7 +60,7 @@ const serviceAreas = [
     description: 'Coverage for major hotels and conference venues for business travelers.',
     availability: '24/7',
     landmarks: ['Grand Hotel', 'Convention Center', 'Business Inn', 'Executive Suites'],
-    image: '/placeholder.svg', // You can replace this with your own image
+    image: 'https://images.unsplash.com/photo-1482938289607-e9573fc25ebb?auto=format&fit=crop&q=80', // Hotel and conference center
     details: 'Business travelers can rely on our Hotel & Conference Centers service for all their transportation needs. Available 24/7, we ensure attendees and organizers of conferences, seminars, and business events have dependable transportation between venues, hotels, and other points of interest.'
   }
 ];

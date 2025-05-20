@@ -31,14 +31,22 @@ export const PaymentDialog = ({ open, onClose, rideDetails }: PaymentDialogProps
 
       setIsLoading(true);
       try {
+        console.log('Fetching payment intent for ride:', rideDetails);
         const { data, error } = await supabase.functions.invoke('create-payment-intent', {
           body: { rideDetails },
         });
 
         if (error) {
+          console.error('Error response from payment intent function:', error);
           throw error;
         }
 
+        if (!data || !data.clientSecret) {
+          console.error('Invalid response data:', data);
+          throw new Error('Invalid payment intent data received');
+        }
+
+        console.log('Payment intent created successfully');
         setClientSecret(data.clientSecret);
         setAmount(data.amount);
       } catch (error) {
@@ -61,12 +69,14 @@ export const PaymentDialog = ({ open, onClose, rideDetails }: PaymentDialogProps
     if (!rideDetails?.rideId) return;
     
     try {
+      console.log('Updating ride status to completed');
       // Update the ride status to completed and set the amount
       const { error } = await supabase
         .from('rides')
         .update({ 
           status: 'completed',
-          amount: amount / 100 // Convert cents to dollars
+          amount: amount / 100, // Convert cents to dollars
+          payment_date: new Date().toISOString()
         })
         .eq('id', rideDetails.rideId);
       
@@ -80,7 +90,7 @@ export const PaymentDialog = ({ open, onClose, rideDetails }: PaymentDialogProps
       } else {
         toast({
           title: 'Payment Successful',
-          description: 'Your ride has been confirmed.',
+          description: 'Your ride has been confirmed and paid.',
         });
       }
       

@@ -96,6 +96,9 @@ const handleRequest = async (req: Request) => {
       metadata: {
         user_id: user.id,
         ride_id: rideDetails.rideId,
+        pickup_location: rideDetails.pickupLocation,
+        drop_location: rideDetails.dropLocation,
+        vehicle_type: rideDetails.vehicleType
       },
     });
     
