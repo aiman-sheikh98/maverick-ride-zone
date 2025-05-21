@@ -30,70 +30,77 @@ export const PaymentDialog = ({ open, onClose, rideDetails }: PaymentDialogProps
   const navigate = useNavigate();
   const [retryCount, setRetryCount] = useState(0);
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+  const [paymentComplete, setPaymentComplete] = useState(false);
   const maxRetries = 3;
 
+  // Reset state when dialog opens/closes or ride details change
   useEffect(() => {
-    const getPaymentIntent = async () => {
-      if (!open || !rideDetails) return;
-
-      setIsLoading(true);
+    if (open && rideDetails) {
       setError(null);
-      
-      try {
-        console.log('Fetching payment intent for ride:', rideDetails);
-        const { data, error } = await supabase.functions.invoke('create-payment-intent', {
-          body: { rideDetails },
-        });
+      setPaymentComplete(false);
+      setClientSecret('');
+      getPaymentIntent();
+    }
+  }, [open, rideDetails]);
 
-        if (error) {
-          console.error('Error response from payment intent function:', error);
-          
-          if (retryCount < maxRetries) {
-            setRetryCount(prev => prev + 1);
-            setTimeout(() => getPaymentIntent(), 1500); // Retry after 1.5 seconds
-            return;
-          }
-          
-          setError('Unable to set up payment. Please try again.');
-          toast({
-            title: 'Payment Setup Failed',
-            description: error.message || 'Unable to set up payment process. Please try again.',
-            variant: 'destructive',
-          });
+  const getPaymentIntent = async () => {
+    if (!open || !rideDetails) return;
+
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      console.log('Fetching payment intent for ride:', rideDetails);
+      const { data, error } = await supabase.functions.invoke('create-payment-intent', {
+        body: { rideDetails },
+      });
+
+      if (error) {
+        console.error('Error response from payment intent function:', error);
+        
+        if (retryCount < maxRetries) {
+          setRetryCount(prev => prev + 1);
+          setTimeout(() => getPaymentIntent(), 1500); // Retry after 1.5 seconds
           return;
         }
-
-        if (!data || !data.clientSecret) {
-          console.error('Invalid response data:', data);
-          setError('Invalid payment data received. Please try again.');
-          toast({
-            title: 'Payment Setup Failed',
-            description: 'Invalid payment data received. Please try again.',
-            variant: 'destructive',
-          });
-          return;
-        }
-
-        console.log('Payment intent created successfully');
-        setClientSecret(data.clientSecret);
-        setAmount(data.amount);
-        setIsTestMode(data.test_mode || false);
-        setRetryCount(0); // Reset retry count on success
-      } catch (err) {
-        console.error('Error fetching payment intent:', err);
-        setError('An unexpected error occurred. Please try again.');
+        
+        setError('Unable to set up payment. Please try again.');
         toast({
           title: 'Payment Setup Failed',
-          description: 'An unexpected error occurred. Please try again.',
+          description: error.message || 'Unable to set up payment process. Please try again.',
           variant: 'destructive',
         });
-      } finally {
-        setIsLoading(false);
+        return;
       }
-    };
 
-    getPaymentIntent();
-  }, [open, rideDetails, onClose, toast, retryCount]);
+      if (!data || !data.clientSecret) {
+        console.error('Invalid response data:', data);
+        setError('Invalid payment data received. Please try again.');
+        toast({
+          title: 'Payment Setup Failed',
+          description: 'Invalid payment data received. Please try again.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      console.log('Payment intent created successfully');
+      setClientSecret(data.clientSecret);
+      setAmount(data.amount);
+      setIsTestMode(data.test_mode || false);
+      setRetryCount(0); // Reset retry count on success
+    } catch (err) {
+      console.error('Error fetching payment intent:', err);
+      setError('An unexpected error occurred. Please try again.');
+      toast({
+        title: 'Payment Setup Failed',
+        description: 'An unexpected error occurred. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handlePaymentSuccess = async () => {
     if (!rideDetails?.rideId) return;
@@ -119,6 +126,7 @@ export const PaymentDialog = ({ open, onClose, rideDetails }: PaymentDialogProps
           variant: 'destructive',
         });
       } else {
+        setPaymentComplete(true);
         setShowSuccessDialog(true);
       }
     } catch (err) {
@@ -138,7 +146,10 @@ export const PaymentDialog = ({ open, onClose, rideDetails }: PaymentDialogProps
       setShowSuccessDialog(false);
     }
     onClose();
-    navigate('/dashboard', { replace: true });
+    
+    if (paymentComplete) {
+      navigate('/dashboard', { replace: true });
+    }
   };
 
   const handleCancel = () => {
@@ -153,57 +164,6 @@ export const PaymentDialog = ({ open, onClose, rideDetails }: PaymentDialogProps
     setRetryCount(0);
     setError(null);
     getPaymentIntent();
-  };
-
-  const getPaymentIntent = async () => {
-    if (!rideDetails) return;
-
-    setIsLoading(true);
-    setError(null);
-    
-    try {
-      console.log('Fetching payment intent for ride:', rideDetails);
-      const { data, error } = await supabase.functions.invoke('create-payment-intent', {
-        body: { rideDetails },
-      });
-
-      if (error) {
-        console.error('Error response from payment intent function:', error);
-        setError('Unable to set up payment. Please try again.');
-        toast({
-          title: 'Payment Setup Failed',
-          description: error.message || 'Unable to set up payment process. Please try again.',
-          variant: 'destructive',
-        });
-        return;
-      }
-
-      if (!data || !data.clientSecret) {
-        console.error('Invalid response data:', data);
-        setError('Invalid payment data received. Please try again.');
-        toast({
-          title: 'Payment Setup Failed',
-          description: 'Invalid payment data received. Please try again.',
-          variant: 'destructive',
-        });
-        return;
-      }
-
-      console.log('Payment intent created successfully');
-      setClientSecret(data.clientSecret);
-      setAmount(data.amount);
-      setIsTestMode(data.test_mode || false);
-    } catch (err) {
-      console.error('Error fetching payment intent:', err);
-      setError('An unexpected error occurred. Please try again.');
-      toast({
-        title: 'Payment Setup Failed',
-        description: 'An unexpected error occurred. Please try again.',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsLoading(false);
-    }
   };
 
   return (

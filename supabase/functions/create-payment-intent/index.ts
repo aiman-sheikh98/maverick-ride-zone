@@ -95,7 +95,7 @@ const handleRequest = async (req: Request) => {
       apiVersion: '2023-10-16',
     });
 
-    // Create a payment intent
+    // Create a payment intent with automatic confirmation disabled
     logStep('Creating payment intent');
     try {
       const paymentIntent = await stripe.paymentIntents.create({
@@ -140,7 +140,7 @@ const handleRequest = async (req: Request) => {
       return new Response(JSON.stringify({ 
         clientSecret: paymentIntent.client_secret,
         amount,
-        test_mode: true // Explicitly indicate we're in test mode
+        test_mode: true // Always use test mode in this implementation
       }), {
         headers: corsHeaders,
         status: 200,

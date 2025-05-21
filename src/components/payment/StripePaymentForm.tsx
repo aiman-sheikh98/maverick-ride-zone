@@ -47,6 +47,13 @@ const PaymentForm = ({ onSuccess, onCancel, amount, isTestMode }: Omit<StripePay
 
     try {
       console.log('Confirming payment...');
+      
+      // Make sure the payment element is properly mounted first
+      const paymentElement = elements.getElement('payment');
+      if (!paymentElement) {
+        throw new Error('Payment element not properly mounted. Please try again.');
+      }
+      
       const { error, paymentIntent } = await stripe.confirmPayment({
         elements,
         confirmParams: {
@@ -76,7 +83,7 @@ const PaymentForm = ({ onSuccess, onCancel, amount, isTestMode }: Omit<StripePay
         }, 1000); // Give user time to see success message
       } else if (paymentIntent) {
         console.log('Payment status:', paymentIntent.status);
-        // For test mode, we'll treat 'processing' as success too
+        // For test mode, we'll treat all non-error states as success
         setPaymentStatus('succeeded');
         toast({
           title: "Payment Processed",
@@ -97,11 +104,11 @@ const PaymentForm = ({ onSuccess, onCancel, amount, isTestMode }: Omit<StripePay
       }
     } catch (error: any) {
       console.error('Payment error:', error);
-      setErrorMessage('An unexpected error occurred. Please try again.');
+      setErrorMessage(error.message || 'An unexpected error occurred. Please try again.');
       setPaymentStatus('error');
       toast({
         title: "Payment Error",
-        description: "An unexpected error occurred. Please try again.",
+        description: error.message || "An unexpected error occurred. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -233,6 +240,15 @@ const PaymentForm = ({ onSuccess, onCancel, amount, isTestMode }: Omit<StripePay
 
 // The outer component that provides the Stripe Elements context
 export const StripePaymentForm = ({ clientSecret, onSuccess, onCancel, amount, isTestMode }: StripePaymentFormProps) => {
+  const [key, setKey] = useState(0); // Add key to force re-render when client secret changes
+  
+  // When client secret changes, update the key to force a re-render of the Elements component
+  useEffect(() => {
+    if (clientSecret) {
+      setKey(prevKey => prevKey + 1);
+    }
+  }, [clientSecret]);
+  
   const options = {
     clientSecret,
     appearance: {
@@ -265,7 +281,7 @@ export const StripePaymentForm = ({ clientSecret, onSuccess, onCancel, amount, i
         </CardTitle>
       </CardHeader>
       <CardContent className="pt-6">
-        <Elements stripe={stripePromise} options={options}>
+        <Elements key={key} stripe={stripePromise} options={options}>
           <PaymentForm onSuccess={onSuccess} onCancel={onCancel} amount={amount} isTestMode={isTestMode} />
         </Elements>
       </CardContent>
