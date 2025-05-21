@@ -7,6 +7,7 @@ import { Loader2, CreditCard, AlertCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
 interface PaymentDialogProps {
   open: boolean;
@@ -24,9 +25,11 @@ export const PaymentDialog = ({ open, onClose, rideDetails }: PaymentDialogProps
   const [isLoading, setIsLoading] = useState(false);
   const [amount, setAmount] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [isTestMode, setIsTestMode] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
   const [retryCount, setRetryCount] = useState(0);
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
   const maxRetries = 3;
 
   useEffect(() => {
@@ -74,6 +77,7 @@ export const PaymentDialog = ({ open, onClose, rideDetails }: PaymentDialogProps
         console.log('Payment intent created successfully');
         setClientSecret(data.clientSecret);
         setAmount(data.amount);
+        setIsTestMode(data.test_mode || false);
         setRetryCount(0); // Reset retry count on success
       } catch (err) {
         console.error('Error fetching payment intent:', err);
@@ -115,14 +119,8 @@ export const PaymentDialog = ({ open, onClose, rideDetails }: PaymentDialogProps
           variant: 'destructive',
         });
       } else {
-        toast({
-          title: 'Payment Successful',
-          description: 'Your ride has been confirmed and paid.',
-        });
+        setShowSuccessDialog(true);
       }
-      
-      onClose();
-      navigate('/dashboard');
     } catch (err) {
       console.error('Error in payment success handler:', err);
       toast({
@@ -133,6 +131,14 @@ export const PaymentDialog = ({ open, onClose, rideDetails }: PaymentDialogProps
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleDialogClose = () => {
+    if (showSuccessDialog) {
+      setShowSuccessDialog(false);
+    }
+    onClose();
+    navigate('/dashboard', { replace: true });
   };
 
   const handleCancel = () => {
@@ -186,6 +192,7 @@ export const PaymentDialog = ({ open, onClose, rideDetails }: PaymentDialogProps
       console.log('Payment intent created successfully');
       setClientSecret(data.clientSecret);
       setAmount(data.amount);
+      setIsTestMode(data.test_mode || false);
     } catch (err) {
       console.error('Error fetching payment intent:', err);
       setError('An unexpected error occurred. Please try again.');
@@ -200,57 +207,87 @@ export const PaymentDialog = ({ open, onClose, rideDetails }: PaymentDialogProps
   };
 
   return (
-    <Dialog open={open} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-md dark:bg-slate-900 border-primary/10">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <CreditCard className="h-5 w-5 text-primary" />
-            Complete Your Payment
-          </DialogTitle>
-          <DialogDescription>
-            Please complete the payment to confirm your ride booking.
-          </DialogDescription>
-        </DialogHeader>
+    <>
+      <Dialog open={open} onOpenChange={(open) => !open && onClose()}>
+        <DialogContent className="sm:max-w-md dark:bg-slate-900 border-primary/10">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CreditCard className="h-5 w-5 text-primary" />
+              Complete Your Payment
+            </DialogTitle>
+            <DialogDescription>
+              Please complete the payment to confirm your ride booking.
+              {isTestMode && (
+                <div className="mt-1 text-xs bg-amber-50 text-amber-700 p-2 rounded border border-amber-200">
+                  This is running in test mode. No actual charges will be made.
+                </div>
+              )}
+            </DialogDescription>
+          </DialogHeader>
 
-        {isLoading ? (
-          <div className="flex flex-col items-center justify-center py-8 space-y-3">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            <p className="text-sm text-muted-foreground">Setting up payment...</p>
-          </div>
-        ) : error ? (
-          <div className="text-center py-6 space-y-4">
-            <div className="flex flex-col items-center gap-4">
-              <div className="h-16 w-16 rounded-full bg-red-100 flex items-center justify-center">
-                <AlertCircle className="h-10 w-10 text-red-500" />
+          {isLoading ? (
+            <div className="flex flex-col items-center justify-center py-8 space-y-3">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <p className="text-sm text-muted-foreground">Setting up payment...</p>
+            </div>
+          ) : error ? (
+            <div className="text-center py-6 space-y-4">
+              <div className="flex flex-col items-center gap-4">
+                <div className="h-16 w-16 rounded-full bg-red-100 flex items-center justify-center">
+                  <AlertCircle className="h-10 w-10 text-red-500" />
+                </div>
+                <h3 className="text-lg font-semibold">Payment Failed</h3>
+                <p className="text-destructive text-center">{error}</p>
               </div>
-              <h3 className="text-lg font-semibold">Payment Failed</h3>
-              <p className="text-destructive text-center">{error}</p>
+              <div className="flex justify-center gap-3 mt-6">
+                <Button 
+                  variant="outline" 
+                  onClick={handleCancel}
+                  className="transition-all hover:scale-105"
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={handleRetry}
+                  className="bg-primary hover:bg-primary/90 transition-all hover:scale-105"
+                >
+                  Try Again
+                </Button>
+              </div>
             </div>
-            <div className="flex justify-center gap-3 mt-6">
-              <Button 
-                variant="outline" 
-                onClick={handleCancel}
-                className="transition-all hover:scale-105"
-              >
-                Cancel
-              </Button>
-              <Button 
-                onClick={handleRetry}
-                className="bg-primary hover:bg-primary/90 transition-all hover:scale-105"
-              >
-                Try Again
-              </Button>
-            </div>
-          </div>
-        ) : (
-          <StripePaymentForm 
-            clientSecret={clientSecret}
-            onSuccess={handlePaymentSuccess}
-            onCancel={handleCancel}
-            amount={amount}
-          />
-        )}
-      </DialogContent>
-    </Dialog>
+          ) : (
+            <StripePaymentForm 
+              clientSecret={clientSecret}
+              onSuccess={handlePaymentSuccess}
+              onCancel={handleCancel}
+              amount={amount}
+              isTestMode={isTestMode}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>
+        <AlertDialogContent className="sm:max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-center flex items-center justify-center gap-2">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+              Payment Successful!
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-center">
+              Your payment of ${(amount / 100).toFixed(2)} has been processed successfully. 
+              Your ride has been confirmed.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="justify-center">
+            <AlertDialogAction onClick={handleDialogClose} className="min-w-[100px]">
+              Got it!
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 };

@@ -16,7 +16,8 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/hooks/use-auth';
 import { supabase } from '@/integrations/supabase/client';
-import { Loader2 } from 'lucide-react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { Loader2, CreditCard, Clock, Trash2, Info, AlertTriangle } from 'lucide-react';
 
 type Ride = {
   id: string;
@@ -36,11 +37,16 @@ type Ride = {
   payment_intent_id?: string | null;
 };
 
+type RideStatus = 'all' | 'upcoming' | 'paid' | 'completed' | 'cancelled' | 'pending_payment';
+
 const Dashboard = () => {
   const { toast } = useToast();
   const { user } = useAuth();
   const [rides, setRides] = useState<Ride[]>([]);
   const [loading, setLoading] = useState(true);
+  const [cancelRideId, setCancelRideId] = useState<string | null>(null);
+  const [showCancelDialog, setShowCancelDialog] = useState(false);
+  const [filterStatus, setFilterStatus] = useState<RideStatus>('all');
 
   useEffect(() => {
     if (!user) return;
@@ -106,13 +112,20 @@ const Dashboard = () => {
   }, [user, toast]);
 
   const handleCancelRide = async (rideId: string) => {
-    if (!user) return;
+    setCancelRideId(rideId);
+    setShowCancelDialog(true);
+  };
 
+  const confirmCancelRide = async () => {
+    if (!user || !cancelRideId) return;
+
+    setShowCancelDialog(false);
+    
     try {
       const { error } = await supabase
         .from('rides')
         .update({ status: 'cancelled' })
-        .eq('id', rideId)
+        .eq('id', cancelRideId)
         .eq('user_id', user.id);
       
       if (error) {
@@ -125,18 +138,20 @@ const Dashboard = () => {
       } else {
         toast({
           title: "Ride Cancelled",
-          description: `Ride has been cancelled.`,
+          description: `Ride has been cancelled successfully.`,
         });
         
         // Update local state
         setRides(prev => 
           prev.map(ride => 
-            ride.id === rideId ? { ...ride, status: 'cancelled' } : ride
+            ride.id === cancelRideId ? { ...ride, status: 'cancelled' } : ride
           )
         );
       }
     } catch (error) {
       console.error('Ride cancellation error:', error);
+    } finally {
+      setCancelRideId(null);
     }
   };
 
@@ -153,12 +168,18 @@ const Dashboard = () => {
     }
   };
 
+  // Filter rides based on status
+  const filteredRides = filterStatus === 'all' 
+    ? rides 
+    : rides.filter(ride => ride.status === filterStatus);
+  
   // Calculate statistics
   const totalRides = rides.length;
   const upcomingRides = rides.filter(ride => ride.status === 'upcoming').length;
   const totalSpent = rides
     .filter(ride => ride.status === 'paid' || ride.status === 'completed')
     .reduce((sum, ride) => sum + (ride.amount || 0), 0);
+  const cancelledRides = rides.filter(ride => ride.status === 'cancelled').length;
 
   if (loading) {
     return (
@@ -176,8 +197,8 @@ const Dashboard = () => {
         <div className="container px-4 mx-auto md:px-8">
           <h1 className="text-3xl font-bold mb-8">My Dashboard</h1>
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <Card>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            <Card className="hover:shadow-md transition-all">
               <CardHeader className="pb-2">
                 <CardTitle>Total Rides</CardTitle>
                 <CardDescription>All time history</CardDescription>
@@ -187,7 +208,7 @@ const Dashboard = () => {
               </CardContent>
             </Card>
             
-            <Card>
+            <Card className="hover:shadow-md transition-all">
               <CardHeader className="pb-2">
                 <CardTitle>Upcoming Rides</CardTitle>
                 <CardDescription>Scheduled pickups</CardDescription>
@@ -197,23 +218,91 @@ const Dashboard = () => {
               </CardContent>
             </Card>
             
-            <Card>
+            <Card className="hover:shadow-md transition-all">
               <CardHeader className="pb-2">
                 <CardTitle>Total Spent</CardTitle>
                 <CardDescription>All rides combined</CardDescription>
               </CardHeader>
               <CardContent>
-                <p className="text-3xl font-bold">
+                <p className="text-3xl font-bold text-green-600">
                   ${totalSpent.toFixed(2)}
                 </p>
               </CardContent>
             </Card>
+            
+            <Card className="hover:shadow-md transition-all">
+              <CardHeader className="pb-2">
+                <CardTitle>Cancelled</CardTitle>
+                <CardDescription>Cancelled rides</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-3xl font-bold text-red-500">{cancelledRides}</p>
+              </CardContent>
+            </Card>
           </div>
           
-          <Card className="mb-6">
+          <Card className="mb-6 hover:shadow-md transition-all">
             <CardHeader>
-              <CardTitle>Ride History</CardTitle>
-              <CardDescription>View all your past and upcoming rides</CardDescription>
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <div>
+                  <CardTitle>Ride History</CardTitle>
+                  <CardDescription>View all your past and upcoming rides</CardDescription>
+                </div>
+                
+                <div className="flex flex-wrap gap-2">
+                  <Button 
+                    onClick={() => setFilterStatus('all')} 
+                    variant={filterStatus === 'all' ? 'default' : 'outline'}
+                    size="sm"
+                    className="text-xs"
+                  >
+                    All
+                  </Button>
+                  <Button 
+                    onClick={() => setFilterStatus('upcoming')} 
+                    variant={filterStatus === 'upcoming' ? 'default' : 'outline'}
+                    size="sm"
+                    className="text-xs"
+                  >
+                    <Clock className="h-3 w-3 mr-1" />
+                    Upcoming
+                  </Button>
+                  <Button 
+                    onClick={() => setFilterStatus('pending_payment')} 
+                    variant={filterStatus === 'pending_payment' ? 'default' : 'outline'}
+                    size="sm"
+                    className="text-xs"
+                  >
+                    <CreditCard className="h-3 w-3 mr-1" />
+                    Pending Payment
+                  </Button>
+                  <Button 
+                    onClick={() => setFilterStatus('paid')} 
+                    variant={filterStatus === 'paid' ? 'default' : 'outline'}
+                    size="sm"
+                    className="text-xs"
+                  >
+                    Paid
+                  </Button>
+                  <Button 
+                    onClick={() => setFilterStatus('completed')} 
+                    variant={filterStatus === 'completed' ? 'default' : 'outline'}
+                    size="sm"
+                    className="text-xs"
+                  >
+                    Completed
+                  </Button>
+                  <Button 
+                    onClick={() => setFilterStatus('cancelled')} 
+                    variant={filterStatus === 'cancelled' ? 'default' : 'outline'}
+                    size="sm"
+                    className="text-xs"
+                  >
+                    <Trash2 className="h-3 w-3 mr-1" />
+                    Cancelled
+                  </Button>
+                </div>
+              </div>
             </CardHeader>
             <CardContent>
               {rides.length === 0 ? (
@@ -222,6 +311,13 @@ const Dashboard = () => {
                   <p className="text-sm text-muted-foreground mt-1">Book a cab to start your journey</p>
                   <Button className="mt-4" onClick={() => window.location.href = '/book-cab'}>
                     Book a Cab
+                  </Button>
+                </div>
+              ) : filteredRides.length === 0 ? (
+                <div className="text-center py-8">
+                  <p className="text-lg font-medium text-muted-foreground">No {filterStatus} rides found</p>
+                  <Button className="mt-4" variant="outline" onClick={() => setFilterStatus('all')}>
+                    Show All Rides
                   </Button>
                 </div>
               ) : (
@@ -239,8 +335,8 @@ const Dashboard = () => {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {rides.map((ride) => (
-                        <TableRow key={ride.id}>
+                      {filteredRides.map((ride) => (
+                        <TableRow key={ride.id} className="hover:bg-accent/20 transition-all">
                           <TableCell>
                             <div className="font-medium">{new Date(ride.date).toLocaleDateString()}</div>
                             <div className="text-sm text-muted-foreground">{ride.time}</div>
@@ -277,43 +373,82 @@ const Dashboard = () => {
                           <TableCell>
                             <Badge 
                               variant={
-                                ride.status === 'completed' || ride.status === 'paid' ? 'secondary' : 
+                                ride.status === 'completed' ? 'secondary' : 
+                                ride.status === 'paid' ? 'default' : 
                                 ride.status === 'cancelled' ? 'destructive' : 
+                                ride.status === 'pending_payment' ? 'outline' : 
                                 'default'
                               }
+                              className={
+                                ride.status === 'cancelled' ? 'bg-red-100 text-red-800 hover:bg-red-200' : 
+                                ride.status === 'paid' ? 'bg-green-100 text-green-800 hover:bg-green-200' : 
+                                ''
+                              }
                             >
-                              {ride.status.charAt(0).toUpperCase() + ride.status.slice(1)}
+                              {ride.status.split('_').map(word => 
+                                word.charAt(0).toUpperCase() + word.slice(1)
+                              ).join(' ')}
                             </Badge>
                           </TableCell>
                           <TableCell>
-                            {ride.amount ? `$${ride.amount.toFixed(2)}` : '-'}
+                            {ride.amount ? (
+                              <span className="font-medium text-green-600">${ride.amount.toFixed(2)}</span>
+                            ) : (
+                              '-'
+                            )}
                           </TableCell>
                           <TableCell>
                             {ride.status === 'upcoming' && (
-                              <Button 
-                                variant="destructive" 
-                                size="sm" 
-                                onClick={() => handleCancelRide(ride.id)}
-                              >
-                                Cancel
-                              </Button>
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button 
+                                    variant="destructive" 
+                                    size="sm"
+                                    className="flex items-center gap-1"
+                                  >
+                                    <Trash2 className="h-3 w-3" />
+                                    Cancel
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Cancel Ride</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      Are you sure you want to cancel this ride? This action cannot be undone.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>No, keep it</AlertDialogCancel>
+                                    <AlertDialogAction 
+                                      onClick={() => handleCancelRide(ride.id)}
+                                      className="bg-red-500 hover:bg-red-600"
+                                    >
+                                      Yes, cancel ride
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
                             )}
                             {ride.status === 'pending_payment' && (
                               <Button 
-                                variant="outline" 
+                                variant="default" 
                                 size="sm"
+                                className="bg-primary hover:bg-primary/90 flex items-center gap-1"
                                 onClick={() => window.location.href = `/book-cab?ride_id=${ride.id}&payment=true`}
                               >
+                                <CreditCard className="h-3 w-3" />
                                 Pay Now
                               </Button>
                             )}
                             {(ride.status === 'completed' || ride.status === 'paid') && (
-                              <Button variant="outline" size="sm">
+                              <Button variant="outline" size="sm" className="flex items-center gap-1">
+                                <Info className="h-3 w-3" />
                                 Details
                               </Button>
                             )}
                             {ride.status === 'cancelled' && (
-                              <Button variant="outline" size="sm" disabled>
+                              <Button variant="ghost" size="sm" className="text-red-500" disabled>
+                                <AlertTriangle className="h-3 w-3 mr-1" />
                                 Cancelled
                               </Button>
                             )}
@@ -328,6 +463,26 @@ const Dashboard = () => {
           </Card>
         </div>
       </div>
+      
+      <AlertDialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cancel Ride</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to cancel this ride? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setCancelRideId(null)}>No, keep it</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmCancelRide}
+              className="bg-red-500 hover:bg-red-600"
+            >
+              Yes, cancel ride
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Layout>
   );
 };

@@ -139,7 +139,8 @@ const handleRequest = async (req: Request) => {
       // Return the client secret to the client
       return new Response(JSON.stringify({ 
         clientSecret: paymentIntent.client_secret,
-        amount
+        amount,
+        test_mode: true // Explicitly indicate we're in test mode
       }), {
         headers: corsHeaders,
         status: 200,

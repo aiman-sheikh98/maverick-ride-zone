@@ -20,10 +20,11 @@ interface StripePaymentFormProps {
   onSuccess: () => void;
   onCancel: () => void;
   amount: number;
+  isTestMode?: boolean;
 }
 
 // The inner payment form component that uses the Stripe hooks
-const PaymentForm = ({ onSuccess, onCancel, amount }: Omit<StripePaymentFormProps, 'clientSecret'>) => {
+const PaymentForm = ({ onSuccess, onCancel, amount, isTestMode }: Omit<StripePaymentFormProps, 'clientSecret'>) => {
   const stripe = useStripe();
   const elements = useElements();
   const [isLoading, setIsLoading] = useState(false);
@@ -72,7 +73,7 @@ const PaymentForm = ({ onSuccess, onCancel, amount }: Omit<StripePaymentFormProp
         });
         setTimeout(() => {
           onSuccess();
-        }, 1500); // Give user time to see success message
+        }, 1000); // Give user time to see success message
       } else if (paymentIntent) {
         console.log('Payment status:', paymentIntent.status);
         // For test mode, we'll treat 'processing' as success too
@@ -83,7 +84,7 @@ const PaymentForm = ({ onSuccess, onCancel, amount }: Omit<StripePaymentFormProp
         });
         setTimeout(() => {
           onSuccess();
-        }, 1500);
+        }, 1000);
       } else {
         console.error('Unexpected response from Stripe');
         setErrorMessage('An unexpected response was received from payment processor.');
@@ -113,6 +114,23 @@ const PaymentForm = ({ onSuccess, onCancel, amount }: Omit<StripePaymentFormProp
       style: 'currency',
       currency: 'USD'
     }).format(amount / 100);
+  };
+
+  // For test mode, display test card information
+  const testCardInfo = () => {
+    if (!isTestMode) return null;
+    
+    return (
+      <div className="mt-4 bg-blue-50 p-3 rounded-md border border-blue-200">
+        <h4 className="font-medium text-blue-800 mb-1 text-sm">Test Mode - Use These Card Details:</h4>
+        <ul className="text-xs text-blue-700 space-y-1">
+          <li>Card Number: <span className="font-mono">4242 4242 4242 4242</span></li>
+          <li>Expiry: Any future date (e.g., 12/25)</li>
+          <li>CVC: Any 3 digits (e.g., 123)</li>
+          <li>ZIP: Any 5 digits (e.g., 12345)</li>
+        </ul>
+      </div>
+    );
   };
 
   if (paymentStatus === 'succeeded') {
@@ -161,14 +179,18 @@ const PaymentForm = ({ onSuccess, onCancel, amount }: Omit<StripePaymentFormProp
         }} />
       </div>
       
+      {testCardInfo()}
+      
       <div className="bg-muted/30 p-4 rounded-md shadow-inner">
         <div className="flex justify-between items-center mb-2">
           <span className="text-sm font-medium">Amount</span>
           <span className="text-base font-bold">{formatAmount(amount)}</span>
         </div>
-        <div className="text-xs text-muted-foreground">
-          This is a test payment. No actual charges will be made.
-        </div>
+        {isTestMode && (
+          <div className="text-xs text-muted-foreground">
+            This is a test payment. No actual charges will be made.
+          </div>
+        )}
       </div>
       
       {errorMessage && (
@@ -210,7 +232,7 @@ const PaymentForm = ({ onSuccess, onCancel, amount }: Omit<StripePaymentFormProp
 };
 
 // The outer component that provides the Stripe Elements context
-export const StripePaymentForm = ({ clientSecret, onSuccess, onCancel, amount }: StripePaymentFormProps) => {
+export const StripePaymentForm = ({ clientSecret, onSuccess, onCancel, amount, isTestMode }: StripePaymentFormProps) => {
   const options = {
     clientSecret,
     appearance: {
@@ -244,12 +266,12 @@ export const StripePaymentForm = ({ clientSecret, onSuccess, onCancel, amount }:
       </CardHeader>
       <CardContent className="pt-6">
         <Elements stripe={stripePromise} options={options}>
-          <PaymentForm onSuccess={onSuccess} onCancel={onCancel} amount={amount} />
+          <PaymentForm onSuccess={onSuccess} onCancel={onCancel} amount={amount} isTestMode={isTestMode} />
         </Elements>
       </CardContent>
       <CardFooter className="text-xs text-muted-foreground flex items-center justify-center bg-accent/10 rounded-b-lg">
         <CreditCard className="h-3 w-3 mr-1" />
-        This is a test payment processed securely by Stripe.
+        {isTestMode ? 'Test payment processed securely by Stripe.' : 'Payment processed securely by Stripe.'}
       </CardFooter>
     </Card>
   );
